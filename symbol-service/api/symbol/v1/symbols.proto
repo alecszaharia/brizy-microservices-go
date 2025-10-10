@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package symbols.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+import "validate/validate.proto";
+
+option go_package = "symbol-service/api/symbols/v1;v1";
+option java_multiple_files = true;
+option java_package = "dev.kratos.api.symbols.v1";
+option java_outer_classname = "SymbolsProtoV1";
+
+
+// The greeting service definition.
+service Symbols {
+    // Sends a greeting
+    rpc CreateSymbol (CreateSymbolRequest) returns (CreateSymbolResponse) {
+        option (google.api.http) = {
+            post: "/v1/symbols"
+            body: "*"
+        };
+    }
+
+    rpc GetSymbol (GetSymbolRequest) returns (GetSymbolResponse) {
+        option (google.api.http) = {
+            get: "/v1/symbols/{id}"
+        };
+    }
+
+    rpc UpdateSymbol (UpdateSymbolRequest) returns (UpdateSymbolResponse) {
+        option (google.api.http) = {
+            put: "/v1/symbols/{id}"
+            body: "*"
+        };
+    }
+
+    rpc DeleteSymbol (DeleteSymbolRequest) returns (DeleteSymbolResponse) {
+        option (google.api.http) = {
+            delete: "/v1/symbols/{id}"
+        };
+    }
+
+    rpc ListSymbols (ListSymbolsRequest) returns (ListSymbolsResponse) {
+        option (google.api.http) = {
+            get: "/v1/projects/{project_id}/symbols"
+        };
+    }
+}
+
+message Symbol {
+    int32 id = 1 [(validate.rules).int32 = {gt: 0}];
+    int32 project_id = 2 [(validate.rules).int32 = {gt: 0}];
+    string uid = 3 [(validate.rules).string = {min_len: 1}];
+    string label = 4 [(validate.rules).string = {min_len: 1}];
+    string class_name = 5 [(validate.rules).string = {min_len: 1}];
+    string component_target = 6 [(validate.rules).string = {min_len: 1}];
+    string version = 7 [(validate.rules).string = {min_len: 1}];
+    bytes data = 8 [(validate.rules).bytes = {min_len: 1}];
+}
+
+// CREATE
+message CreateSymbolRequest {
+    int32 project_id = 2 [(validate.rules).int32 = {gt: 0}];
+    string uid = 3 [(validate.rules).string = {min_len: 1}];
+    string label = 4 [(validate.rules).string = {min_len: 1}];
+    string class_name = 5 [(validate.rules).string = {min_len: 1}];
+    string component_target = 6 [(validate.rules).string = {min_len: 1}];
+    string version = 7 [(validate.rules).int32 = {gt: 0}];
+    bytes data = 8 [(validate.rules).bytes = {min_len: 1}];
+}
+
+
+message CreateSymbolResponse {
+    Symbol symbol = 1 [(validate.rules).message.required = true];
+}
+
+// UPDATE
+message UpdateSymbolRequest {
+    int32 id = 1 [(validate.rules).int32 = {gt: 0}];
+
+    google.protobuf.Int32Value project_id = 2;
+    google.protobuf.StringValue uid = 3;
+    google.protobuf.StringValue label = 4;
+    google.protobuf.StringValue class_name = 5;
+    google.protobuf.StringValue component_target = 6;
+    google.protobuf.StringValue version = 7;
+    google.protobuf.BytesValue data = 8;
+}
+
+message UpdateSymbolResponse {
+    Symbol symbol = 1 [(validate.rules).message.required = true];
+}
+
+// DELETE
+message DeleteSymbolRequest {
+    int32 id = 1;
+}
+message DeleteSymbolResponse {
+    bool success = 1;
+}
+
+// READ
+message GetSymbolRequest {
+    int32 id = 1 [(validate.rules).int32 = {gt: 0}];
+}
+message GetSymbolResponse {
+    Symbol symbol = 1 [(validate.rules).message.required = true];
+}
+
+// LIST
+message ListSymbolsRequest {
+    int32 project_id = 1 [(validate.rules).int32 = {gt: 0}];
+    int32 page_size = 2 [(validate.rules).int32 = {gte: 1, lte: 100}];
+    string page_token = 3;
+
+    // Ordering options
+    enum OrderBy {
+        ORDER_BY_UNSPECIFIED = 0;
+        ORDER_BY_ID = 1;
+        ORDER_BY_LABEL = 3;
+    }
+    OrderBy order_by = 4;
+
+    enum SortDirection {
+        SORT_DIRECTION_UNSPECIFIED = 0;
+        SORT_DIRECTION_ASC = 1;
+        SORT_DIRECTION_DESC = 2;
+    }
+    SortDirection sort_direction = 5;
+}
+message ListSymbolsResponse {
+    repeated Symbol symbols = 1;
+    string page_token = 2;
+    int32 next_page = 3;
+}

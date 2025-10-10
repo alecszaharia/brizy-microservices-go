@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: symbol-service-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - symbol-service-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 5
+      interval: 10s
+
+  symbol-service:
+    build:
+      context: ./symbol-service
+      dockerfile: Dockerfile
+    container_name: symbol-service
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+    volumes:
+      - ./symbol-service/configs:/data/conf
+    networks:
+      - symbol-service-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: ["./symbol-service", "--conf", "/data/conf/config.docker.yaml"]
+    environment:
+      - CONFIG_PATH=/data/conf
+
+volumes:
+  mysql_data:
+
+networks:
+  symbol-service-network:
