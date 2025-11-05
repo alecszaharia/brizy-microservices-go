@@ -61,7 +61,8 @@ func main() {
 
 	err := data_layer.Migrate()
 	if err != nil {
-		log.NewHelper(logger).Error("failed to migrate database")
+		log.NewHelper(logger).Errorf("failed to migrate database: %v", err)
+		panic(err)
 	}
 
 	log.NewHelper(logger).Info("database migration completed")

@@ -1,0 +1,1 @@
+SELECT * FROM `symbols` WHERE project_id=1 AND `symbols`.`deleted_at` IS NULL

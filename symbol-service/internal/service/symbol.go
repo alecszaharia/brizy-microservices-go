@@ -27,7 +27,6 @@ func (s *SymbolService) CreateSymbol(ctx context.Context, in *v1.CreateSymbolReq
 	}
 	return &v1.CreateSymbolResponse{Symbol: toV1Symbol(g)}, nil
 }
-
 func (s *SymbolService) ListSymbols(ctx context.Context, in *v1.ListSymbolsRequest) (*v1.ListSymbolsResponse, error) {
 	symbols, cursor, err := s.uc.ListSymbols(ctx, toBizListSymbolsOptions(in))
 	if err != nil {
@@ -42,7 +41,6 @@ func (s *SymbolService) ListSymbols(ctx context.Context, in *v1.ListSymbolsReque
 
 	return &v1.ListSymbolsResponse{Symbols: result, PageToken: toV1PageToken(cursor)}, nil
 }
-
 func (s *SymbolService) GetSymbol(context.Context, *v1.GetSymbolRequest) (*v1.GetSymbolResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSymbol not implemented")
 }

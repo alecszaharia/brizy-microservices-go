@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"os"
-
 	"symbol-service/internal/conf"
 
 	"github.com/go-kratos/kratos/v2"
@@ -23,14 +22,14 @@ var (
 	Name string
 	// Version is the version of the compiled software.
 	Version string
-	// flagconf is the config flag.
-	flagconf string
+	// configFile is the config flag.
+	configFile string
 
 	id, _ = os.Hostname()
 )
 
 func init() {
-	flag.StringVar(&flagconf, "conf", "configs/config.yaml", "config path, eg: --conf config.yaml")
+	flag.StringVar(&configFile, "conf", "configs/config.yaml", "config path, eg: --conf config.yaml")
 }
 
 func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
@@ -60,7 +59,7 @@ func main() {
 	)
 	c := config.New(
 		config.WithSource(
-			file.NewSource(flagconf),
+			file.NewSource(configFile),
 		),
 	)
 	defer c.Close()

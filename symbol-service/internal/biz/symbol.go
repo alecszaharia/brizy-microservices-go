@@ -54,7 +54,8 @@ type SymbolUseCase struct {
 	validator *validator.Validate
 }
 
-// NewSymbolUseCase new a Symbol usecase.
+// NewSymbolUseCase creates a new Symbol use case.
+
 func NewSymbolUseCase(repo SymbolRepo, validator *validator.Validate, logger log.Logger) *SymbolUseCase {
 	return &SymbolUseCase{repo: repo, validator: validator, log: log.NewHelper(logger)}
 }

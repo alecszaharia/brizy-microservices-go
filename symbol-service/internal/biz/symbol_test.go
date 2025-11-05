@@ -54,6 +54,8 @@ func (m *MockSymbolRepo) Delete(ctx context.Context, id int32) error {
 	return args.Error(0)
 }
 
+
+
 // Helper function to create a test SymbolUseCase
 func setupSymbolUseCase(mockRepo *MockSymbolRepo) *SymbolUseCase {
 	logger := log.NewStdLogger(os.Stdout)
@@ -63,6 +65,7 @@ func setupSymbolUseCase(mockRepo *MockSymbolRepo) *SymbolUseCase {
 
 // Helper function to create a valid Symbol for testing
 func validSymbol() *Symbol {
+	bytes := []byte(`{"key": "value"}`)
 	return &Symbol{
 		Project:         1,
 		Uid:             "550e8400-e29b-41d4-a716-446655440000",
@@ -70,7 +73,7 @@ func validSymbol() *Symbol {
 		ClassName:       "TestClass",
 		ComponentTarget: "TestTarget",
 		Version:         "1.0.0",
-		Data:            &SymbolData{Project: 1, Data: []byte(`{"key": "value"}`)},
+		Data:            &SymbolData{Project: 1, Data: &bytes},
 	}
 }
 
@@ -504,9 +507,10 @@ func TestSymbol_WithSymbolData(t *testing.T) {
 	ctx := context.Background()
 
 	symbol := validSymbol()
+	bytes := []byte(`{"key": "value"}`)
 	symbol.Data = &SymbolData{
 		Project: 1,
-		Data:    []byte(`{"key": "value"}`),
+		Data:    &bytes,
 	}
 
 	expectedSymbol := &Symbol{
@@ -537,9 +541,10 @@ func TestSymbol_SymbolDataValidation(t *testing.T) {
 	ctx := context.Background()
 
 	symbol := validSymbol()
+	bytes := []byte(`{"key": "value"}`)
 	symbol.Data = &SymbolData{
 		Project: 0, // Invalid: must be gt=0
-		Data:    []byte(`{"key": "value"}`),
+		Data:    &bytes,
 	}
 
 	result, err := uc.CreateSymbol(ctx, symbol)

@@ -18,7 +18,7 @@ func toBizSymbol(s *v1.Symbol) *biz.Symbol {
 		Version:         s.Version,
 		Data: &biz.SymbolData{
 			Project: s.ProjectId,
-			Data:    s.Data,
+			Data:    &s.Data,
 		},
 	}
 }
@@ -33,7 +33,7 @@ func toBizSymbolFromRequest(s *v1.CreateSymbolRequest) *biz.Symbol {
 		Version:         s.Version,
 		Data: &biz.SymbolData{
 			Project: s.ProjectId,
-			Data:    s.Data,
+			Data:    &s.Data,
 		},
 	}
 }
@@ -41,7 +41,7 @@ func toBizSymbolFromRequest(s *v1.CreateSymbolRequest) *biz.Symbol {
 func toV1Symbol(s *biz.Symbol) *v1.Symbol {
 	var data []byte
 	if s.Data != nil {
-		data = s.Data.Data
+		data = *s.Data.Data
 	}
 	return &v1.Symbol{
 		Id:              s.Id,

@@ -20,7 +20,7 @@ type SymbolEntity struct {
 	ClassName       string            `gorm:"not null;size:255" json:"class_name"`
 	ComponentTarget string            `gorm:"not null;size:255" json:"component_target"`
 	Version         string            `gorm:"not null;size:50" json:"version"`
-	SymbolData      *SymbolDataEntity `gorm:"foreignKey:SymbolID;constraint:OnDelete:CASCADE;" json:"symbol_data,omitempty"`
+	SymbolData      *SymbolDataEntity `gorm:"foreignKey:SymbolID;references:ID;constraint:OnDelete:CASCADE" json:"symbol_data,omitempty"`
 	CreatedAt       time.Time         `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt       time.Time         `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt       gorm.DeletedAt    `gorm:"index" json:"deleted_at,omitempty"`
