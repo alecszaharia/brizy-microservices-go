@@ -3,6 +3,7 @@ package server
 import (
 	v1 "symbol-service/api/symbol/v1"
 	"symbol-service/internal/conf"
+	"symbol-service/internal/server/middleware"
 	"symbol-service/internal/service"
 
 	"github.com/go-kratos/kratos/v2/log"
@@ -15,6 +16,7 @@ func NewHTTPServer(c *conf.Server, symbolService *service.SymbolService, logger 
 	var opts = []http.ServerOption{
 		http.Middleware(
 			recovery.Recovery(),
+			middleware.CacheControl(300),
 		),
 	}
 	if c.Http.Network != "" {
@@ -26,6 +28,7 @@ func NewHTTPServer(c *conf.Server, symbolService *service.SymbolService, logger 
 	if c.Http.Timeout != nil {
 		opts = append(opts, http.Timeout(c.Http.Timeout.AsDuration()))
 	}
+
 	srv := http.NewServer(opts...)
 	v1.RegisterSymbolsHTTPServer(srv, symbolService)
 	return srv

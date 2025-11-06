@@ -1,4 +1,60 @@
 services:
+  traefik:
+    tty: true
+    image: traefik:v3.5
+    container_name: traefik-go
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yaml:/etc/traefik/traefik.yml # Mount the config file
+    networks:
+      - symbol-service-network
+
+  symbol-service:
+    image: symbol-service:latest
+    build:
+      context: ./symbol-service
+      dockerfile: Dockerfile
+      args:
+        - TARGETARCH=arm64
+        - TARGETOS=linux
+    container_name: symbol-service
+    networks:
+      - symbol-service-network
+    volumes:
+      - ./symbol-service/configs:/data/conf
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: [ "./symbol-service", "--conf", "/data/conf/config.docker.yaml" ]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.symbols.rule=Host(`symbols.localhost`)"
+      - "traefik.http.routers.symbols.entrypoints=web"
+      - "traefik.http.routers.symbols.middlewares=clean-headers"
+      - "traefik.http.services.symbols.loadbalancer.server.port=8000"
+      - "traefik.http.middlewares.clean-headers.headers.customresponseheaders.Cache-Control=no-cache"
+    environment:
+      - CONFIG_PATH=/data/conf
+      - GOMAXPROCS=12
+
+  symbol-migration:
+    image: symbol-service:latest
+    volumes:
+      - ./symbol-service/bin:/app
+      - ./symbol-service/configs:/data/conf
+    networks:
+      - symbol-service-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: [ "./migrate", "--conf", "/data/conf/config.docker.yaml" ]
+    environment:
+      - CONFIG_PATH=/data/conf
+
   mysql:
     image: mysql:8.0
     container_name: symbol-service-mysql
@@ -12,45 +68,11 @@ services:
     networks:
       - symbol-service-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       timeout: 5s
       retries: 5
       interval: 10s
 
-  symbol-service:
-    build:
-      context: ./symbol-service
-      dockerfile: Dockerfile
-    container_name: symbol-service
-    ports:
-      - "8000:8000"
-      - "7000:7000"
-    volumes:
-      - ./symbol-service/bin:/app
-      - ./symbol-service/configs:/data/conf
-    networks:
-      - symbol-service-network
-    depends_on:
-      mysql:
-        condition: service_healthy
-    command: ["./symbol-service", "--conf", "/data/conf/config.docker.yaml"]
-    environment:
-      - CONFIG_PATH=/data/conf
-  symbol-migration:
-    build:
-      context: ./symbol-service
-      dockerfile: Dockerfile
-    volumes:
-      - ./symbol-service/bin:/app
-      - ./symbol-service/configs:/data/conf
-    networks:
-      - symbol-service-network
-    depends_on:
-      mysql:
-        condition: service_healthy
-    command: ["./migrate", "--conf", "/data/conf/config.docker.yaml"]
-    environment:
-      - CONFIG_PATH=/data/conf
 
 volumes:
   mysql_data:

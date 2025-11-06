@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
-	github.com/go-kratos/kratos/v2 v2.8.0
+	github.com/go-kratos/kratos/v2 v2.9.1
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/google/wire v0.6.0
 	go.uber.org/automaxprocs v1.5.1

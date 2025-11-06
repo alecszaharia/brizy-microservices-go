@@ -1,9 +1,13 @@
 FROM golang:1.25 AS builder
 
+ARG TARGETARCH
+ARG TARGETOS
+
 COPY . /src
 WORKDIR /src
 
-RUN make build
+RUN mkdir -p bin/
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./...
 
 FROM debian:stable-slim
 
