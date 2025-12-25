@@ -1,0 +1,396 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "symbols/v1/symbols.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "SymbolsService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/projects/{projectId}/symbols": {
+      "get": {
+        "operationId": "SymbolsService_ListSymbols",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSymbolsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "offset",
+            "description": "Offset-based pagination: number of records to skip",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "limit",
+            "description": "Maximum number of records to return (default: 20)",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SymbolsService"
+        ]
+      }
+    },
+    "/v1/symbols": {
+      "post": {
+        "summary": "Sends a greeting",
+        "operationId": "SymbolsService_CreateSymbol",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateSymbolResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CreateSymbolRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SymbolsService"
+        ]
+      }
+    },
+    "/v1/symbols/{id}": {
+      "get": {
+        "operationId": "SymbolsService_GetSymbol",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetSymbolResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          }
+        ],
+        "tags": [
+          "SymbolsService"
+        ]
+      },
+      "delete": {
+        "operationId": "SymbolsService_DeleteSymbol",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSymbolResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          }
+        ],
+        "tags": [
+          "SymbolsService"
+        ]
+      },
+      "put": {
+        "operationId": "SymbolsService_UpdateSymbol",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpdateSymbolResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SymbolsServiceUpdateSymbolBody"
+            }
+          }
+        ],
+        "tags": [
+          "SymbolsService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "SymbolsServiceUpdateSymbolBody": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "className": {
+          "type": "string"
+        },
+        "componentTarget": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "title": "UPDATE"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1CreateSymbolRequest": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "className": {
+          "type": "string"
+        },
+        "componentTarget": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "title": "CREATE"
+    },
+    "v1CreateSymbolResponse": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/v1Symbol"
+        }
+      }
+    },
+    "v1DeleteSymbolResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1GetSymbolResponse": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/v1Symbol"
+        }
+      }
+    },
+    "v1ListSymbolsResponse": {
+      "type": "object",
+      "properties": {
+        "symbols": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Symbol"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/v1PaginationMeta"
+        }
+      }
+    },
+    "v1PaginationMeta": {
+      "type": "object",
+      "properties": {
+        "totalCount": {
+          "type": "string",
+          "format": "uint64",
+          "title": "Total number of symbols matching the query"
+        },
+        "offset": {
+          "type": "string",
+          "format": "uint64",
+          "title": "Offset used in the request"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int64",
+          "title": "Limit used in the request"
+        },
+        "hasNextPage": {
+          "type": "boolean",
+          "title": "True if more results exist after current page"
+        },
+        "hasPreviousPage": {
+          "type": "boolean",
+          "title": "True if previous results exist (offset \u003e 0)"
+        }
+      },
+      "title": "PaginationMeta contains metadata about paginated results"
+    },
+    "v1Symbol": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "projectId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "className": {
+          "type": "string"
+        },
+        "componentTarget": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1UpdateSymbolResponse": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "$ref": "#/definitions/v1Symbol"
+        }
+      }
+    }
+  }
+}

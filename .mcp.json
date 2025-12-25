@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "serena-symbols": {
+      "type": "sse",
+      "url": "http://127.0.0.1:9121/sse"
+    },
+    "jetbrains": {
+      "url": "http://localhost:64343/sse",
+      "type": "sse"
+    }
+  }
+}

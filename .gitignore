@@ -1,0 +1,74 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+coverage.out
+
+# Go build artifacts
+bin/
+dist/
+
+# Dependency directories
+vendor/
+
+# Go workspace sum (go.work should be committed, but sum is personal)
+go.work.sum
+
+# Compiled Object files, Static and Dynamic libs
+*.o
+*.a
+
+# Generated code
+**/wire_gen.go
+**/*.pb.go
+**/*_grpc.pb.go
+**/*_http.pb.go
+**/*.pb.validate.go
+**/openapiv2/
+
+# Buf lock file (generated)
+buf.lock
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS specific
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+
+# Certificates and keys
+*.cert
+*.key
+*.pem
+
+# Environment files
+.env
+.env.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Review artifacts
+review-*
+
+# Claude Code session data (optional - remove if you want to commit)
+.claude/

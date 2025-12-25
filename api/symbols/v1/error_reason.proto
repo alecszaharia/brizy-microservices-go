@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package symbols.v1;
+
+option go_package = "symbols/api/symbols/v1;v1";
+
+enum ErrorReason {
+  SYMBOL_UNSPECIFIED = 0;
+  SYMBOL_NOT_FOUND = 1;
+  INVALID_PAGE_TOKEN = 2; // Invalid pagination token
+  VALIDATION_ERROR = 3; // General validation error
+  DUPLICATE_SYMBOL = 4; // Duplicate symbol (unique constraint violation)
+  INVALID_ID = 5; // Invalid symbol ID (zero or negative)
+  INVALID_DATA = 6; // Invalid or corrupted symbol data
+  DATABASE_ERROR = 7; // Generic database operation failed
+}

@@ -1,0 +1,86 @@
+services:
+  traefik:
+    tty: true
+    image: traefik:v3.5
+    container_name: traefik-go
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - .traefik/traefik.yaml:/etc/traefik/traefik.yml # Mount the config file
+    networks:
+      - service-network
+  symbol-service:
+    image: symbol-service:latest
+    build:
+      context: ./
+      dockerfile: services/symbols/Dockerfile.debug
+      args:
+        - TARGETARCH=arm64
+        - TARGETOS=linux
+    container_name: symbol-service
+    networks:
+      - service-network
+    volumes:
+      - ./services/symbols/configs:/data/conf
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - 2345:2345 # debug port
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.symbols.rule=Host(`symbols.localhost`)"
+      - "traefik.http.routers.symbols.entrypoints=web"
+      - "traefik.http.routers.symbols.service=symbols"
+      - "traefik.http.services.symbols.loadbalancer.server.port=8000"
+
+      - "traefik.http.routers.symbolsgrpc.rule=Host(`symbols-grpc.localhost`)"
+      - "traefik.http.routers.symbolsgrpc.entrypoints=grpc"
+      - "traefik.http.routers.symbolsgrpc.service=symbolsgrpc"
+      - "traefik.http.services.symbolsgrpc.loadbalancer.server.url=h2c://symbol-service:9000"
+    environment:
+      - CONFIG_PATH=/data/conf
+      - GOMAXPROCS=12
+      - KRATOS_DB_DSN=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=True&loc=Local
+  serena-symbols:
+    build:
+      context: .serena/
+      dockerfile: Dockerfile
+    command: [ "uv","run","--directory","${PWD}","serena-mcp-server","--project","${PWD}","--transport","sse","--port","9121","--host 0.0.0.0" ]
+    networks:
+      - service-network
+    environment:
+      - SERENA_DOCKER=1
+      - SERENA_PORT=9121
+      - SERENA_DASHBOARD_PORT=24282
+    ports:
+      - "9121:9121"  # MCP server port
+      - "24282:24282"  # Dashboard port (default 0x5EDA = 24282)
+    volumes:
+      - ./:${PWD}/
+  mysql:
+    image: mysql:8.0
+    container_name: symbol-service-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - service-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 5s
+      retries: 5
+      interval: 10s
+
+volumes:
+  mysql_data:
+
+networks:
+  service-network:

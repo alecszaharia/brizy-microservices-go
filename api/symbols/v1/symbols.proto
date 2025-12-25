@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package symbols.v1;
+
+import "google/api/annotations.proto";
+import "validate/validate.proto";
+
+option go_package = "symbols/api/symbols/v1;v1";
+
+// The greeting service definition.
+service SymbolsService {
+  // Sends a greeting
+  rpc CreateSymbol(CreateSymbolRequest) returns (CreateSymbolResponse) {
+    option (google.api.http) = {
+      post: "/v1/symbols"
+      body: "*"
+    };
+  }
+
+  rpc GetSymbol(GetSymbolRequest) returns (GetSymbolResponse) {
+    option (google.api.http) = {get: "/v1/symbols/{id}"};
+  }
+
+  rpc UpdateSymbol(UpdateSymbolRequest) returns (UpdateSymbolResponse) {
+    option (google.api.http) = {
+      put: "/v1/symbols/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteSymbol(DeleteSymbolRequest) returns (DeleteSymbolResponse) {
+    option (google.api.http) = {delete: "/v1/symbols/{id}"};
+  }
+
+  rpc ListSymbols(ListSymbolsRequest) returns (ListSymbolsResponse) {
+    option (google.api.http) = {get: "/v1/projects/{project_id}/symbols"};
+  }
+}
+
+message Symbol {
+  uint64 id = 1 [(validate.rules).uint64 = {gt: 0}];
+  uint64 project_id = 2 [(validate.rules).uint64 = {gt: 0}];
+  string uid = 3 [(validate.rules).string = {min_len: 1}];
+  string label = 4 [(validate.rules).string = {min_len: 1}];
+  string class_name = 5 [(validate.rules).string = {min_len: 1}];
+  string component_target = 6 [(validate.rules).string = {min_len: 1}];
+  uint32 version = 7 [(validate.rules).uint32 = {gt: 0}];
+  bytes data = 8 [(validate.rules).bytes = {min_len: 1}];
+}
+
+// CREATE
+message CreateSymbolRequest {
+  uint64 project_id = 2 [(validate.rules).uint64 = {gt: 0}];
+  string uid = 3 [(validate.rules).string = {min_len: 1}];
+  string label = 4 [(validate.rules).string = {min_len: 1}];
+  string class_name = 5 [(validate.rules).string = {min_len: 1}];
+  string component_target = 6 [(validate.rules).string = {min_len: 1}];
+  uint32 version = 7 [(validate.rules).uint32 = {gt: 0}];
+  bytes data = 8 [(validate.rules).bytes = {min_len: 1}];
+}
+
+message CreateSymbolResponse {
+  Symbol symbol = 1 [(validate.rules).message.required = true];
+}
+
+// UPDATE
+message UpdateSymbolRequest {
+  uint64 id = 1 [(validate.rules).uint64 = {gt: 0}];
+
+  uint64 project_id = 2 [(validate.rules).uint64 = {gt: 0}];
+  string uid = 3;
+  string label = 4;
+  string class_name = 5;
+  string component_target = 6;
+  uint32 version = 7;
+  bytes data = 8;
+}
+
+message UpdateSymbolResponse {
+  Symbol symbol = 1 [(validate.rules).message.required = true];
+}
+
+// DELETE
+message DeleteSymbolRequest {
+  uint64 id = 1 [(validate.rules).uint64 = {gt: 0}];
+}
+message DeleteSymbolResponse {
+  bool success = 1;
+}
+
+// READ
+message GetSymbolRequest {
+  uint64 id = 1 [(validate.rules).uint64 = {gt: 0}];
+}
+message GetSymbolResponse {
+  Symbol symbol = 1 [(validate.rules).message.required = true];
+}
+
+// LIST
+message ListSymbolsRequest {
+  uint64 project_id = 1 [(validate.rules).uint64 = {gt: 0}];
+  // Offset-based pagination: number of records to skip
+  uint64 offset = 2 [(validate.rules).uint64 = {gte: 0}];
+  // Maximum number of records to return (default: 20)
+  uint32 limit = 3 [(validate.rules).uint32 = {
+    gte: 1
+    lte: 100
+  }];
+}
+
+// PaginationMeta contains metadata about paginated results
+message PaginationMeta {
+  // Total number of symbols matching the query
+  uint64 total_count = 1;
+  // Offset used in the request
+  uint64 offset = 2;
+  // Limit used in the request
+  uint32 limit = 3;
+  // True if more results exist after current page
+  bool has_next_page = 4;
+  // True if previous results exist (offset > 0)
+  bool has_previous_page = 5;
+}
+
+message ListSymbolsResponse {
+  repeated Symbol symbols = 1;
+  PaginationMeta pagination = 2;
+}

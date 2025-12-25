@@ -1,0 +1,36 @@
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 1s
+    cors:
+      allowed_origins:
+        - "*"
+      allowed_methods:
+        - "GET"
+        - "POST"
+        - "PUT"
+        - "DELETE"
+        - "PATCH"
+        - "OPTIONS"
+      allowed_headers:
+        - "Content-Type"
+        - "Authorization"
+        - "X-Request-ID"
+      exposed_headers:
+        - "X-Request-ID"
+        - "X-Response-Time"
+      allow_credentials: true
+      max_age: 3600s  # 1 hour
+
+  grpc:
+    addr: 0.0.0.0:7000
+    timeout: 1s
+data:
+  database:
+    # to make interpolation work properly you should have KRATOS_{NAME} declared
+    driver: mysql
+    source: ${DB_DSN}
+    run_migrations: true
+    max_idle_conns: ${DB_MAX_IDLE_CONNS:5}
+    max_open_conns: ${DB_MAX_OPEN_CONNS:20}
+    conn_max_lifetime: ${DB_CONN_MAX_LIFETIME:14400s}
