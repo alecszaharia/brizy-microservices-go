@@ -71,4 +71,4 @@ temp/
 review-*
 
 # Claude Code session data (optional - remove if you want to commit)
-.claude/
+.claude/settings.local.json
