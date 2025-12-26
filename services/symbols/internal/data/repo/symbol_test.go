@@ -21,12 +21,12 @@ import (
 func setupTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
-		t.Fatalf("Failed to open in-memory SQLite database: %v", err)
+		t.Errorf("Failed to open in-memory SQLite database: %v", err)
 	}
 
 	// Run migrations for test tables
 	if err := db.AutoMigrate(&model.Symbol{}, &model.SymbolData{}); err != nil {
-		t.Fatalf("Failed to migrate test tables: %v", err)
+		t.Errorf("Failed to migrate test tables: %v", err)
 	}
 
 	return db

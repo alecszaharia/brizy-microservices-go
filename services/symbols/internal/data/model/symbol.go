@@ -10,12 +10,12 @@ type BaseModel struct {
 	ID        uint64 `gorm:"primaryKey;autoIncrement"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index;index:idx_project_deleted_at,priority:2"`
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
 type Symbol struct {
 	BaseModel
-	ProjectID       uint64      `gorm:"not null;uniqueIndex:idx_project_uid,priority:1;index:idx_project_id,priority:1;index:idx_project_deleted_at,priority:1" json:"project_id"`
+	ProjectID       uint64      `gorm:"not null;uniqueIndex:idx_project_uid,priority:1;index:idx_project_id,priority:1;index:idx_symbols_project_deleted_at,priority:1" json:"project_id"`
 	UID             string      `gorm:"not null;size:255;uniqueIndex:idx_project_uid,priority:2" json:"uid"`
 	Label           string      `gorm:"not null;size:255" json:"label"`
 	ClassName       string      `gorm:"not null;size:255" json:"class_name"`

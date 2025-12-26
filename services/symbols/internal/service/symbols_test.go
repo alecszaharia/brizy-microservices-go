@@ -345,7 +345,7 @@ func TestListSymbols(t *testing.T) {
 			checkResult: func(t *testing.T, resp *v1.ListSymbolsResponse) {
 				assert.NotNil(t, resp)
 				assert.Len(t, resp.Symbols, 1)
-				assert.Nil(t, resp.Symbols[0].Data)
+				assert.IsType(t, &v1.SymbolItem{}, resp.Symbols[0])
 			},
 		},
 	}
