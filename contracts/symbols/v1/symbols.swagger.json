@@ -314,7 +314,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/v1Symbol"
+            "$ref": "#/definitions/v1SymbolItem"
           }
         },
         "pagination": {
@@ -381,6 +381,35 @@
         "data": {
           "type": "string",
           "format": "byte"
+        }
+      }
+    },
+    "v1SymbolItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "projectId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "uid": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "className": {
+          "type": "string"
+        },
+        "componentTarget": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },

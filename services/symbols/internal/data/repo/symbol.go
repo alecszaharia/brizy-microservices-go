@@ -90,10 +90,9 @@ func (r *symbolRepo) ListSymbols(ctx context.Context, options *biz.ListSymbolsOp
 
 	// Execute data query with pagination
 	query := baseQuery.
-		Order("id ASC").                        // Default ordering by ID
-		Limit(int(options.Pagination.Limit)).   // Limit results
-		Offset(int(options.Pagination.Offset)). // Skip offset records
-		Preload("SymbolData")                   // Eagerly load symbol data - I think this should not be loaded for list
+		Limit(int(options.Pagination.Limit)).  // Limit results
+		Offset(int(options.Pagination.Offset)) // Skip offset records
+	//Preload("SymbolData")                   // Eagerly load symbol data - I think this should not be loaded for list
 
 	if err := query.Find(&symbolEntities).Error; err != nil {
 		r.log.WithContext(ctx).Errorf("Failed to list symbols: %v", err)
@@ -199,7 +198,9 @@ func toEntitySymbol(s *biz.Symbol) *model.Symbol {
 	}
 
 	d := &model.Symbol{
-		ID:              s.Id,
+		BaseModel: model.BaseModel{
+			ID: s.Id,
+		},
 		ProjectID:       s.Project,
 		UID:             s.Uid,
 		Label:           s.Label,
@@ -210,7 +211,9 @@ func toEntitySymbol(s *biz.Symbol) *model.Symbol {
 
 	if s.Data != nil {
 		d.SymbolData = &model.SymbolData{
-			ID:       s.Data.Id,
+			BaseModel: model.BaseModel{
+				ID: s.Data.Id,
+			},
 			SymbolID: s.Id,
 			Data:     s.Data.Data,
 		}

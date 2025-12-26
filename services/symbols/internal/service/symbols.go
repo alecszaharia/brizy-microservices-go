@@ -39,9 +39,9 @@ func (s *SymbolService) ListSymbols(ctx context.Context, in *v1.ListSymbolsReque
 	}
 
 	// Transform symbols to proto format
-	result := make([]*v1.Symbol, 0, len(symbols))
+	result := make([]*v1.SymbolItem, 0, len(symbols))
 	for _, symbol := range symbols {
-		result = append(result, toV1Symbol(symbol))
+		result = append(result, toV1SymbolItem(symbol))
 	}
 
 	// Transform pagination metadata to proto format

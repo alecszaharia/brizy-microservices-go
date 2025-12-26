@@ -94,6 +94,17 @@ func toV1Symbol(s *biz.Symbol) *v1.Symbol {
 		Data:            data,
 	}
 }
+func toV1SymbolItem(s *biz.Symbol) *v1.SymbolItem {
+	return &v1.SymbolItem{
+		Id:              s.Id,
+		ProjectId:       s.Project,
+		Uid:             s.Uid,
+		Label:           s.Label,
+		ClassName:       s.ClassName,
+		ComponentTarget: s.ComponentTarget,
+		Version:         s.Version,
+	}
+}
 
 // toV1PaginationMeta transforms domain pagination metadata to proto metadata
 func toV1PaginationMeta(meta *pagination.PaginationMeta) *v1.PaginationMeta {

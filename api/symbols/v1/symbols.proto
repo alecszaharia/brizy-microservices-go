@@ -37,6 +37,16 @@ service SymbolsService {
   }
 }
 
+message SymbolItem {
+  uint64 id = 1 [(validate.rules).uint64 = {gt: 0}];
+  uint64 project_id = 2 [(validate.rules).uint64 = {gt: 0}];
+  string uid = 3 [(validate.rules).string = {min_len: 1}];
+  string label = 4 [(validate.rules).string = {min_len: 1}];
+  string class_name = 5 [(validate.rules).string = {min_len: 1}];
+  string component_target = 6 [(validate.rules).string = {min_len: 1}];
+  uint32 version = 7 [(validate.rules).uint32 = {gt: 0}];
+}
+
 message Symbol {
   uint64 id = 1 [(validate.rules).uint64 = {gt: 0}];
   uint64 project_id = 2 [(validate.rules).uint64 = {gt: 0}];
@@ -123,6 +133,6 @@ message PaginationMeta {
 }
 
 message ListSymbolsResponse {
-  repeated Symbol symbols = 1;
+  repeated SymbolItem symbols = 1;
   PaginationMeta pagination = 2;
 }
