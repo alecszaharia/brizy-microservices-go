@@ -14,9 +14,13 @@ services:
       - service-network
   symbol-service:
     image: symbol-service:latest
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     build:
       context: ./
-      dockerfile: services/symbols/Dockerfile.debug
+      dockerfile: services/symbols/Dockerfile
       args:
         - TARGETARCH=arm64
         - TARGETOS=linux

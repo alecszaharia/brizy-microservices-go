@@ -4,8 +4,8 @@ ARG TARGETARCH
 ARG TARGETOS
 ARG VERSION=dev
 
-COPY . /src
-WORKDIR /src
+COPY ../../ /src
+WORKDIR /src/services/symbols
 
 RUN mkdir -p bin/
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./...
@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         && rm -rf /var/lib/apt/lists/ \
         && apt-get autoremove -y && apt-get autoclean -y
 
-COPY --from=builder /src/bin /app
+COPY --from=builder /src/services/symbols/bin /app
 
 WORKDIR /app
 
