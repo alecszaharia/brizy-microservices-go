@@ -121,7 +121,7 @@ func (r *symbolRepo) Delete(ctx context.Context, id uint64) error {
 	// Begin transaction
 
 	// Delete symbol
-	result := r.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Where("id = ?", id).Delete(&model.Symbol{})
+	result := r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.Symbol{})
 	if err := result.Error; err != nil {
 		return r.mapGormError(err)
 	}

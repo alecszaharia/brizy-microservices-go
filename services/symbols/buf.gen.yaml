@@ -2,6 +2,8 @@ version: v2
 managed:
   enabled: true
 plugins:
+  # Generate Go protobuf code for service configuration schema
+  # Used to define strongly-typed config loaded from YAML at runtime
   - remote: buf.build/protocolbuffers/go
     out: internal/conf
     opt: paths=source_relative

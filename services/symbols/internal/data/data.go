@@ -22,15 +22,15 @@ type data struct {
 	log *log.Helper
 }
 
-// NewData .
+// NewData initializes a new data instance, a cleanup function, and returns an error if initialization fails.
 func NewData(db *gorm.DB, logger log.Logger) (*data, func(), error) {
 	l := log.NewHelper(logger)
 	cleanup := func() {
 		sqlDB, _ := db.DB()
-		log.NewHelper(logger).Info("closing the data resources")
+		l.Info("closing the data resources")
 		err := sqlDB.Close()
 		if err != nil {
-			log.NewHelper(logger).Errorf("failed to close the data resource")
+			l.Errorf("failed to close the data resource")
 			return
 		}
 	}
@@ -38,6 +38,7 @@ func NewData(db *gorm.DB, logger log.Logger) (*data, func(), error) {
 	return &data{db: db, log: l}, cleanup, nil
 }
 
+// NewDB initializes and returns a new gorm.DB connection configured with the given settings and logger.
 func NewDB(cfg *conf.Data, logger log.Logger) *gorm.DB {
 	db, err := gorm.Open(mysql.Open(cfg.Database.Source), &gorm.Config{})
 	if err != nil {
@@ -60,16 +61,13 @@ func NewDB(cfg *conf.Data, logger log.Logger) *gorm.DB {
 	return db
 }
 
-// NewTransaction provider
+// NewTransaction creates and returns a new Transaction instance using the provided data dependency.
 func NewTransaction(d *data) common.Transaction {
 	return d
 }
 
-type contextTxKey struct{}
-
-func (d *data) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
+func (d *data) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB) error) error {
 	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		ctx = context.WithValue(ctx, contextTxKey{}, tx)
-		return fn(ctx)
+		return fn(ctx, tx)
 	})
 }

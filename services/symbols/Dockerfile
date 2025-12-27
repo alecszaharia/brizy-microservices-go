@@ -23,7 +23,7 @@ COPY --from=builder /src/services/symbols/bin /app
 WORKDIR /app
 
 EXPOSE 8000
-EXPOSE 9000
+EXPOSE 7000
 VOLUME /data/conf
 
 CMD [ "./symbol-service", "--conf", "/data/conf/config.yaml" ]

@@ -12,8 +12,14 @@ services:
       - .traefik/traefik.yaml:/etc/traefik/traefik.yml # Mount the config file
     networks:
       - service-network
-  symbol-service:
-    image: symbol-service:latest
+  test:
+    build:
+      context: ./
+      dockerfile: services/test/Dockerfile
+    networks:
+      - service-network
+  symbols:
+    image: symbols:latest
     ulimits:
       nofile:
         soft: 65535
@@ -24,7 +30,7 @@ services:
       args:
         - TARGETARCH=arm64
         - TARGETOS=linux
-    container_name: symbol-service
+    container_name: symbols
     networks:
       - service-network
     volumes:
@@ -44,7 +50,8 @@ services:
       - "traefik.http.routers.symbolsgrpc.rule=Host(`symbols-grpc.localhost`)"
       - "traefik.http.routers.symbolsgrpc.entrypoints=grpc"
       - "traefik.http.routers.symbolsgrpc.service=symbolsgrpc"
-      - "traefik.http.services.symbolsgrpc.loadbalancer.server.url=h2c://symbol-service:9000"
+      - "traefik.http.services.symbolsgrpc.loadbalancer.server.url=h2c://symbols:7000"
+      - "traefik.http.services.symbolsgrpc.loadbalancer.server.scheme=h2c"
     environment:
       - CONFIG_PATH=/data/conf
       - GOMAXPROCS=12
@@ -67,7 +74,7 @@ services:
       - ./:${PWD}/
   mysql:
     image: mysql:8.0
-    container_name: symbol-service-mysql
+    container_name: symbols-mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}

@@ -10,7 +10,7 @@ brizy-go-services/
 ├── contracts/        # Generated Go code from protos → See contracts/README.md
 ├── platform/         # Shared utilities (middleware, pagination, adapters)
 └── services/
-    └── {service-name}/      # All service-specific code
+    └── {service-name}/      # All service-specific code. Kratos Apps.
 ```
 
 Services follow **Clean Architecture** with layers: `service` → `biz` → `data`.
@@ -19,7 +19,7 @@ Services follow **Clean Architecture** with layers: `service` → `biz` → `dat
 
 ### Core Tools
 
-- **Go 1.25+** - Primary programming language ([download](https://go.dev/dl/))
+- **Go 1.25+** - Primary programming language
 - **make** - Build automation (pre-installed on macOS/Linux)
 - **git** - Version control (required for versioning and breaking change detection)
 - **Docker & Docker Compose** - Container runtime ([installation](https://docs.docker.com/get-docker/))
@@ -45,10 +45,6 @@ This installs:
 - `kratos` - Kratos framework CLI
 
 **Note**: Remote buf plugins (Connect RPC, OpenAPI v2) are automatically managed by buf and don't require local installation.
-
-### Supported Environments
-
-macOS, Ubuntu
 
 ## Quick Start
 

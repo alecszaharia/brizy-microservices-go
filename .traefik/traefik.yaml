@@ -13,7 +13,7 @@ entryPoints:
     forwardedHeaders:
       insecure: true
   grpc:
-    address: ":9000"
+    address: ":7000"
 
 log:
   level: DEBUG
