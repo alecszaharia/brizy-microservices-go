@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	v1 "contracts/symbols/v1"
+	v1 "contracts/gen/symbols/v1"
 	"symbols/internal/biz"
 )
 

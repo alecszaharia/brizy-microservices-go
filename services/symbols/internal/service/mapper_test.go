@@ -1,7 +1,7 @@
 package service
 
 import (
-	v1 "contracts/symbols/v1"
+	v1 "contracts/gen/symbols/v1"
 	"platform/pagination"
 	"testing"
 
