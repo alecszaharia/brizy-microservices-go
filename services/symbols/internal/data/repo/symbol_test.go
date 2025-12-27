@@ -1,11 +1,11 @@
 package repo
 
 import (
-	"brizy-go-platform/pagination"
 	"context"
 	"errors"
 	"fmt"
 	"os"
+	"platform/pagination"
 	"symbols/internal/biz"
 	"symbols/internal/data/common"
 	"symbols/internal/data/model"
@@ -74,8 +74,8 @@ func validEntitySymbol() *model.Symbol {
 // mockTransaction is a mock implementation of the Transaction interface
 type mockTransaction struct{}
 
-func (m *mockTransaction) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
-	return fn(ctx)
+func (m *mockTransaction) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB) error) error {
+	return fn(ctx, nil)
 }
 
 // Compile-time interface check

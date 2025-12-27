@@ -1,9 +1,9 @@
 package repo
 
 import (
-	"brizy-go-platform/pagination"
 	"context"
 	"errors"
+	"platform/pagination"
 	"strings"
 	"symbols/internal/biz"
 	"symbols/internal/data/common"

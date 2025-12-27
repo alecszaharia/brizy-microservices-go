@@ -1,10 +1,10 @@
 package service
 
 import (
-	v1 "brizy-go-contracts/symbols/v1"
-	"brizy-go-platform/pagination"
 	"context"
+	v1 "contracts/symbols/v1"
 	"errors"
+	"platform/pagination"
 	"symbols/internal/biz"
 	"testing"
 

@@ -1,8 +1,8 @@
 package server
 
 import (
-	v1 "brizy-go-contracts/symbols/v1"
-	"brizy-go-platform/middleware"
+	v1 "contracts/symbols/v1"
+	"platform/middleware"
 	"symbols/internal/conf"
 	"symbols/internal/service"
 

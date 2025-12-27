@@ -1,8 +1,8 @@
 package biz
 
 import (
-	"brizy-go-platform/pagination"
 	"context"
+	"platform/pagination"
 )
 
 type SymbolUseCase interface {

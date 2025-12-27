@@ -1,6 +1,7 @@
 version: v2
 managed:
   enabled: true
+clean: true
 plugins:
   # Generate standard Go protobuf message types (*.pb.go)
   - remote: buf.build/protocolbuffers/go
@@ -29,6 +30,10 @@ plugins:
   # Generate OpenAPI v2 (Swagger) documentation from protobuf services
   # Useful for API documentation and client SDK generation
   - remote: buf.build/grpc-ecosystem/openapiv2
+    opt:
+      - allow_merge=true
+      - merge_file_name=api
+      - output_format=json
     out: contracts
 inputs:
   - directory: api

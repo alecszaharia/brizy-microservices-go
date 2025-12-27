@@ -1,6 +1,6 @@
 package biz
 
-import "brizy-go-platform/pagination"
+import "platform/pagination"
 
 type SymbolData struct {
 	Id      uint64  `validate:"omitempty,gte=0"`

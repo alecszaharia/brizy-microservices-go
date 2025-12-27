@@ -1,10 +1,10 @@
 package biz
 
 import (
-	"brizy-go-platform/pagination"
 	"context"
 	"errors"
 	"fmt"
+	"platform/pagination"
 	"symbols/internal/data/common"
 
 	"github.com/go-kratos/kratos/v2/log"

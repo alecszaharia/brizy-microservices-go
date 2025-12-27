@@ -5,13 +5,12 @@
 package v1connect
 
 import (
-	v1 "brizy-go-contracts/symbols/v1"
+	connect "connectrpc.com/connect"
+	v1 "contacts/symbols/v1"
 	context "context"
 	errors "errors"
 	http "net/http"
 	strings "strings"
-
-	connect "connectrpc.com/connect"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are

@@ -1,4 +1,4 @@
-module brizy-go-platform
+module platform
 
 go 1.25
 

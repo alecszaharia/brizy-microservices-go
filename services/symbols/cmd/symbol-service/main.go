@@ -1,9 +1,9 @@
 package main
 
 import (
-	"brizy-go-platform/middleware"
 	"flag"
 	"os"
+	"platform/middleware"
 	"symbols/internal/conf"
 
 	"github.com/go-kratos/kratos/v2"

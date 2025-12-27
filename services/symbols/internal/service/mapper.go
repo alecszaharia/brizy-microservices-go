@@ -1,9 +1,9 @@
 package service
 
 import (
-	v1 "brizy-go-contracts/symbols/v1"
-	"brizy-go-platform/pagination"
+	v1 "contracts/symbols/v1"
 	"fmt"
+	"platform/pagination"
 
 	"symbols/internal/biz"
 
