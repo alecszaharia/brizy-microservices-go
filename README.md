@@ -48,7 +48,8 @@ This installs:
 
 ## Quick Start
 
-### 1. Generate API Contracts
+### Generate API Contracts only when necessary (Only there was a change in the proto files)
+Always commit the generated code in contracts. Failing to commit the generated code will cause the CI to fail.
 
 ```bash
 # Generate gRPC, Connect RPC, and OpenAPI code from protos
@@ -58,7 +59,7 @@ make contracts-generate
 make contracts-all
 ```
 
-### 2. Build & Run Services
+### Build & Run Services
 
 ```bash
 # Build symbol service
@@ -89,7 +90,6 @@ cd services/{service-name}
 make generate   # Generate Wire dependency injection code
 make build      # Build binary → bin/service-name
 make test       # Run tests with race detection
-make coverage   # Generate coverage report
 make coverage   # Generate coverage report
 ```
 
