@@ -28,7 +28,7 @@ type CORS struct {
 	AllowedMethods   []string               `protobuf:"bytes,2,rep,name=allowed_methods,json=allowedMethods,proto3" json:"allowed_methods,omitempty"`        // List of allowed HTTP methods (e.g., ["GET", "POST", "PUT", "DELETE"])
 	AllowedHeaders   []string               `protobuf:"bytes,3,rep,name=allowed_headers,json=allowedHeaders,proto3" json:"allowed_headers,omitempty"`        // List of allowed request headers (e.g., ["Content-Type", "Authorization"])
 	ExposedHeaders   []string               `protobuf:"bytes,4,rep,name=exposed_headers,json=exposedHeaders,proto3" json:"exposed_headers,omitempty"`        // List of headers to expose to the browser
-	ExposedHeaders7  []string               `protobuf:"bytes,7,rep,name=exposed_headers7,json=exposedHeaders7,proto3" json:"exposed_headers7,omitempty"`     // List of headers to expose to the browser
+	ExposedHeaders2  []string               `protobuf:"bytes,7,rep,name=exposed_headers2,json=exposedHeaders2,proto3" json:"exposed_headers2,omitempty"`     // List of headers to expose to the browser
 	AllowCredentials bool                   `protobuf:"varint,5,opt,name=allow_credentials,json=allowCredentials,proto3" json:"allow_credentials,omitempty"` // Whether to allow credentials (cookies, authorization headers)
 	MaxAge           *durationpb.Duration   `protobuf:"bytes,6,opt,name=max_age,json=maxAge,proto3" json:"max_age,omitempty"`                                // How long browsers should cache preflight results
 	unknownFields    protoimpl.UnknownFields
@@ -93,9 +93,9 @@ func (x *CORS) GetExposedHeaders() []string {
 	return nil
 }
 
-func (x *CORS) GetExposedHeaders7() []string {
+func (x *CORS) GetExposedHeaders2() []string {
 	if x != nil {
-		return x.ExposedHeaders7
+		return x.ExposedHeaders2
 	}
 	return nil
 }
@@ -336,7 +336,7 @@ const file_conf_v1_servers_proto_rawDesc = "" +
 	"\x0fallowed_methods\x18\x02 \x03(\tR\x0eallowedMethods\x12'\n" +
 	"\x0fallowed_headers\x18\x03 \x03(\tR\x0eallowedHeaders\x12'\n" +
 	"\x0fexposed_headers\x18\x04 \x03(\tR\x0eexposedHeaders\x12)\n" +
-	"\x10exposed_headers7\x18\a \x03(\tR\x0fexposedHeaders7\x12+\n" +
+	"\x10exposed_headers2\x18\a \x03(\tR\x0fexposedHeaders2\x12+\n" +
 	"\x11allow_credentials\x18\x05 \x01(\bR\x10allowCredentials\x122\n" +
 	"\amax_age\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\x06maxAge\"\x92\x01\n" +
 	"\n" +
