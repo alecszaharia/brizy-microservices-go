@@ -1,4 +1,4 @@
-name: Validate Contracts
+name: Validate Contracts and Service Isolation
 
 on:
   pull_request:
@@ -58,6 +58,12 @@ jobs:
         run: |
           # Download buf module dependencies (googleapis, protoc-gen-validate)
           buf dep update
+
+      - name: Check for breaking changes
+        run: |
+          # Compare current proto files against main branch
+          # Uses buf.yaml breaking rules (FILE strategy)
+          make contracts-breaking
 
       - name: Generate contracts
         run: make contracts-generate
