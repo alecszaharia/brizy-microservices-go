@@ -11,6 +11,7 @@ message CORS {
   repeated string allowed_methods = 2; // List of allowed HTTP methods (e.g., ["GET", "POST", "PUT", "DELETE"])
   repeated string allowed_headers = 3; // List of allowed request headers (e.g., ["Content-Type", "Authorization"])
   repeated string exposed_headers = 4; // List of headers to expose to the browser
+  repeated string exposed_headers2 = 7; // List of headers to expose to the browser
   bool allow_credentials = 5; // Whether to allow credentials (cookies, authorization headers)
   google.protobuf.Duration max_age = 6; // How long browsers should cache preflight results
 }
