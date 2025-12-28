@@ -69,7 +69,7 @@ func NewListSymbolsOptions(in *v1.ListSymbolsRequest) (*biz.ListSymbolsOptions, 
 
 	options := &biz.ListSymbolsOptions{
 		ProjectID: in.ProjectId,
-		Pagination: pagination.PaginationParams{
+		Pagination: pagination.OffsetPaginationParams{
 			Offset: uint64(offset),
 			Limit:  limit,
 		},
@@ -107,7 +107,7 @@ func toV1SymbolItem(s *biz.Symbol) *v1.SymbolItem {
 }
 
 // toV1PaginationMeta transforms domain pagination metadata to proto metadata
-func toV1PaginationMeta(meta *pagination.PaginationMeta) *v1.PaginationMeta {
+func toV1PaginationMeta(meta *pagination.Meta) *v1.PaginationMeta {
 	if meta == nil {
 		return nil
 	}

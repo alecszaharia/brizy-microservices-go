@@ -1,315 +1,327 @@
 ---
-name: path-finder
+skill_name: path-finder
 description: Provides correct file paths for brizy-go-services monorepo based on Clean Architecture conventions and workspace structure. Use when you need to reference or locate files in the codebase.
+tags: [paths, file-structure, clean-architecture, monorepo, workspace]
+version: 1.0.0
+last_updated: 2025-12-28
 ---
 
-<objective>
-Provide instant, accurate file paths for all main components in the brizy-go-services Go monorepo, following Clean Architecture patterns and go-kratos framework conventions.
-</objective>
+# Path Finder Skill
 
-<workspace_structure>
-The project uses **Go 1.25 workspaces** with three main modules:
+## Purpose
 
-**Root Level:**
-```
-/Users/alex/GolandProjects/brizy-go-services/
-├── go.work                    # Workspace definition
-├── Makefile                   # Contracts generation commands
-├── CLAUDE.md                  # Project instructions
-├── README.md                  # Project overview
-├── docker-compose.yml         # Service orchestration
-├── buf.yaml                   # Buf configuration (root)
-├── buf.gen.yaml              # Buf generation config (root)
-├── api/                       # Proto definitions
-├── contracts/                 # Generated proto code
-├── platform/                  # Shared utilities
-└── services/                  # Microservices
-```
+Navigate the brizy-go-services monorepo file structure following Clean Architecture patterns and Go workspace conventions.
 
-**Workspace Modules:**
-1. `contracts/` - Generated protobuf code
-2. `platform/` - Shared platform utilities
-3. `services/symbols/` - Symbol service
-</workspace_structure>
+## Workspace Structure
 
-<api_and_contracts>
-**Proto Definitions (source):**
 ```
-api/{service}/v1/{service}.proto
-api/symbols/v1/symbols.proto
-```
-
-**Generated Contracts:**
-```
-contracts/{service}/v1/
-contracts/symbols/v1/
-  ├── {service}_grpc.pb.go        # gRPC service
-  ├── {service}.pb.go             # Protocol buffers
-  ├── {service}_http.pb.go        # HTTP bindings
-  └── {service}.swagger.json      # OpenAPI spec
-```
-
-**Commands:**
-- Generate: `make contracts-generate` (from root)
-- Lint: `make contracts-lint` (from root)
-- Format: `make contracts-format` (from root)
-</api_and_contracts>
-
-<platform_module>
-**Shared Platform Code:**
-```
-platform/
-├── go.mod                     # Platform module definition
-├── middleware/
-│   └── requestid/
-│       ├── requestid.go       # Request ID middleware
-│       └── context.go         # Context helpers
-├── pagination/
-│   ├── pagination.go          # Pagination utilities
-│   └── meta.go               # Pagination metadata
-└── adapters/
-    └── ...                    # Common transformers
+brizy-go-services/
+├── go.work                          # Go workspace definition
+├── go.work.sum                      # Workspace checksums
+├── contracts/                       # Shared protobuf module
+│   ├── go.mod
+│   └── gen/                         # Generated code
+│       └── {service}/
+│           └── v1/
+│               ├── {service}.pb.go
+│               ├── {service}_grpc.pb.go
+│               └── {service}.swagger.json
+├── platform/                        # Shared utilities module
+│   ├── go.mod
+│   ├── middleware/
+│   ├── pagination/
+│   └── adapters/
+└── services/                        # Microservices
+    └── {service}/                   # Individual service
+        ├── go.mod
+        ├── Makefile
+        ├── cmd/
+        │   └── {service}/
+        │       ├── main.go
+        │       ├── wire.go
+        │       └── wire_gen.go
+        ├── internal/
+        │   ├── biz/                 # Business logic layer
+        │   │   ├── interfaces.go
+        │   │   ├── models.go
+        │   │   ├── {entity}.go
+        │   │   └── {entity}_test.go
+        │   ├── data/                # Data access layer
+        │   │   ├── data.go
+        │   │   ├── model/
+        │   │   │   └── {entity}.go
+        │   │   ├── repo/
+        │   │   │   ├── {entity}.go
+        │   │   │   └── {entity}_test.go
+        │   │   └── common/
+        │   │       └── transaction.go
+        │   ├── service/             # Service layer (handlers)
+        │   │   ├── service.go
+        │   │   ├── {entity}.go
+        │   │   ├── {entity}_test.go
+        │   │   ├── mapper.go
+        │   │   └── mapper_test.go
+        │   ├── server/              # Server setup
+        │   │   ├── grpc.go
+        │   │   └── http.go
+        │   └── conf/                # Configuration
+        │       └── conf.proto
+        └── configs/
+            └── config.yaml
 ```
 
-**Import Path:** `brizy-go-platform/{package}`
-</platform_module>
+## Layer-Specific Paths
 
-<service_structure>
-**Symbol Service (Clean Architecture):**
+### Business Layer (biz)
 
-**Entry Point & Wire:**
-```
-services/symbols/cmd/symbols/
-├── main.go                    # Service entry point
-├── wire.go                    # Wire dependency definitions
-└── wire_gen.go               # Generated wire code (auto-generated)
-```
+**Location**: \`services/{service}/internal/biz/\`
 
-**Configuration:**
-```
-services/symbols/internal/conf/
-├── conf.proto                 # Config schema (protobuf)
-└── conf.pb.go                # Generated config code
+**File Patterns**:
+- \`interfaces.go\` - Repository interface definitions
+- \`models.go\` - Business domain models and DTOs
+- \`{entity}.go\` - Use case implementations
+- \`{entity}_test.go\` - Use case tests
+- \`errors.go\` - Business error definitions
+- \`validator.go\` - Validation logic
 
-services/symbols/configs/
-└── config.yaml               # Runtime configuration
-```
+**Import Path**: \`{service}/internal/biz\`
 
-**Business Logic Layer (Biz):**
-```
-services/symbols/internal/biz/
-├── biz.go                    # Wire ProviderSet
-├── interfaces.go             # Repository interfaces (SymbolRepo, SymbolUseCase)
-├── models.go                 # Business models (Symbol, ListSymbolsOptions)
-├── validator.go              # Business validation
-├── errors.go                 # Business errors
-├── symbols.go                # Symbol use case implementation
-└── symbols_test.go           # Use case unit tests
+**Example**:
+```go
+// services/symbols/internal/biz/symbols.go
+package biz
+
+import "context"
+
+type SymbolUseCase interface {
+    GetSymbol(ctx context.Context, id uint64) (*Symbol, error)
+}
 ```
 
-**Data Access Layer (Data):**
-```
-services/symbols/internal/data/
-├── data.go                   # Database setup, Wire ProviderSet
-├── model/
-│   └── symbol.go             # GORM entities
-├── repo/
-│   └── symbol.go             # Repository implementations
-└── common/
-    └── transaction.go        # Transaction utilities
-```
+### Data Layer (data)
 
-**Service Layer (Handlers):**
-```
-services/symbols/internal/service/
-├── service.go                # Service struct, Wire ProviderSet
-├── symbols.go                # gRPC/HTTP handlers
-└── mapper.go                 # DTO ↔ Business model mapping
-```
+**Location**: \`services/{service}/internal/data/\`
 
-**Server Setup:**
-```
-services/symbols/internal/server/
-├── server.go                 # Wire ProviderSet
-├── grpc.go                   # gRPC server configuration
-└── http.go                   # HTTP server configuration
-```
+**Subdirectories**:
+- \`model/\` - GORM entities (database models)
+- \`repo/\` - Repository implementations
+- \`common/\` - Shared data layer utilities
 
-**Build Output:**
-```
-services/symbols/bin/
-└── symbols                   # Built binary
+**File Patterns**:
+- \`data.go\` - Database setup and initialization
+- \`model/{entity}.go\` - GORM entity definition
+- \`repo/{entity}.go\` - Repository implementation
+- \`repo/{entity}_test.go\` - Repository tests
+- \`common/transaction.go\` - Transaction utilities
+
+**Import Paths**:
+- GORM models: \`{service}/internal/data/model\`
+- Repositories: \`{service}/internal/data/repo\`
+- Common utilities: \`{service}/internal/data/common\`
+
+**Example**:
+```go
+// services/symbols/internal/data/repo/symbol.go
+package repo
+
+import (
+    "symbols/internal/biz"
+    "symbols/internal/data/model"
+)
 ```
 
-**Other Files:**
-```
-services/symbols/
-├── go.mod                    # Service module definition
-├── Makefile                  # Service commands
-├── buf.yaml                  # Service buf config
-├── buf.gen.yaml             # Service buf generation
-├── Dockerfile               # Production container
-└── Dockerfile.debug         # Debug container
-```
-</service_structure>
+### Service Layer (service)
 
-<quick_paths>
-## Quick Path Reference
+**Location**: \`services/{service}/internal/service/\`
 
-**To find a specific component, use these patterns:**
+**File Patterns**:
+- \`service.go\` - Service struct definition
+- \`{entity}.go\` - gRPC/HTTP handler implementations
+- \`{entity}_test.go\` - Service handler tests
+- \`mapper.go\` - DTO ↔ Domain model conversions
+- \`mapper_test.go\` - Mapper tests
+- \`errors.go\` - Service error mapping
 
-| Component Type | Path Pattern |
-|---------------|--------------|
-| Proto definition | `api/{service}/v1/{service}.proto` |
-| Generated contracts | `contracts/{service}/v1/` |
-| Platform utilities | `platform/{package}/` |
-| Service entry point | `services/{service}/cmd/{service}/main.go` |
-| Wire definitions | `services/{service}/cmd/{service}/wire.go` |
-| Business interfaces | `services/{service}/internal/biz/interfaces.go` |
-| Business models | `services/{service}/internal/biz/models.go` |
-| Use case logic | `services/{service}/internal/biz/{entity}.go` |
-| Use case tests | `services/{service}/internal/biz/{entity}_test.go` |
-| GORM entities | `services/{service}/internal/data/model/{entity}.go` |
-| Repository impl | `services/{service}/internal/data/repo/{entity}.go` |
-| gRPC handlers | `services/{service}/internal/service/{entity}.go` |
-| DTO mappers | `services/{service}/internal/service/mapper.go` |
-| Server config | `services/{service}/internal/server/{grpc\|http}.go` |
-| Config schema | `services/{service}/internal/conf/conf.proto` |
-| Runtime config | `services/{service}/configs/config.yaml` |
-| Service Makefile | `services/{service}/Makefile` |
-| Built binary | `services/{service}/bin/{service}` |
+**Import Path**: \`{service}/internal/service\`
 
-**Currently active service:** `symbols`
-</quick_paths>
+**Example**:
+```go
+// services/symbols/internal/service/symbols.go
+package service
 
-<path_conventions>
-## Naming Conventions
-
-**Files:**
-- Use snake_case: `symbols.go`, `symbols_test.go`
-- Tests co-located: `{name}_test.go` next to `{name}.go`
-- Wire generated: `wire_gen.go` (never manually edit)
-
-**Directories:**
-- Lowercase singular: `biz/`, `data/`, `service/`, `server/`, `conf/`
-- Plurals for collections: `configs/`, `services/`
-- Nested by domain: `data/model/`, `data/repo/`
-
-**Import Paths:**
-- Contracts: `brizy-go-services/contracts/{service}/v1`
-- Platform: `brizy-go-platform/{package}`
-- Internal: Cannot be imported from outside service
-</path_conventions>
-
-<usage_examples>
-## Common Usage Scenarios
-
-**1. Where is the business logic for symbols?**
-```
-services/symbols/internal/biz/symbols.go
+import (
+    v1 "contracts/gen/symbols/v1"
+    "symbols/internal/biz"
+)
 ```
 
-**2. Where do I define new repository methods?**
-Interface: `services/symbols/internal/biz/interfaces.go`
-Implementation: `services/symbols/internal/data/repo/symbol.go`
+### Server Layer (server)
 
-**3. Where do I add new gRPC methods?**
-Proto: `api/symbols/v1/symbols.proto`
-Handler: `services/symbols/internal/service/symbols.go`
+**Location**: \`services/{service}/internal/server/\`
 
-**4. Where is the database entity?**
-```
-services/symbols/internal/data/model/symbol.go
-```
+**Files**:
+- \`grpc.go\` - gRPC server setup
+- \`http.go\` - HTTP server setup (Kratos bindings)
 
-**5. Where do I add business validation?**
-```
-services/symbols/internal/biz/validator.go
-```
+**Import Path**: \`{service}/internal/server\`
 
-**6. Where is the service configuration?**
-Schema: `services/symbols/internal/conf/conf.proto`
-Values: `services/symbols/configs/config.yaml`
+### Configuration
 
-**7. Where are pagination utilities?**
-```
-platform/pagination/pagination.go
-```
+**Location**: \`services/{service}/internal/conf/\`
 
-**8. Where do I run tests from?**
-```
-cd services/symbols
-make test
-```
+**Files**:
+- \`conf.proto\` - Configuration protobuf schema
 
-**9. Where is the generated Wire code?**
-```
-services/symbols/cmd/symbols/wire_gen.go
-```
-(Auto-generated by `make generate`)
+**Runtime Config**: \`services/{service}/configs/config.yaml\`
 
-**10. Where are proto contracts generated?**
-```
-contracts/symbols/v1/
-```
-(Generated by `make contracts-generate` from root)
-</usage_examples>
+## Shared Modules
 
-<layer_mapping>
-## Clean Architecture Layer Paths
+### Contracts (Protobuf)
 
-**Service Layer** (external interface):
-- Handlers: `services/{service}/internal/service/{entity}.go`
-- Mappers: `services/{service}/internal/service/mapper.go`
-- Server setup: `services/{service}/internal/server/`
+**Location**: \`contracts/gen/{service}/v1/\`
 
-**Business Layer** (use cases):
-- Interfaces: `services/{service}/internal/biz/interfaces.go`
-- Models: `services/{service}/internal/biz/models.go`
-- Logic: `services/{service}/internal/biz/{entity}.go`
-- Validation: `services/{service}/internal/biz/validator.go`
+**Generated Files**:
+- \`{service}.pb.go\` - Protobuf messages
+- \`{service}_grpc.pb.go\` - gRPC service definitions
+- \`{service}_http.pb.go\` - Kratos HTTP bindings
+- \`{service}.swagger.json\` - OpenAPI spec
 
-**Data Layer** (persistence):
-- Setup: `services/{service}/internal/data/data.go`
-- Entities: `services/{service}/internal/data/model/{entity}.go`
-- Repos: `services/{service}/internal/data/repo/{entity}.go`
+**Import Path**: \`contracts/gen/{service}/v1\`
 
-**Dependency Flow:** Service → Biz → Data
-</layer_mapping>
-
-<working_directory>
-## Current Working Directory Context
-
-When working with files, remember:
-
-**From root** (`/Users/alex/GolandProjects/brizy-go-services/`):
-- Contract operations: `make contracts-*`
-- Access all modules via workspace
-
-**From service** (`cd services/symbols`):
-- Service operations: `make generate`, `make test`, `make build`
-- Relative paths start from service root
-
-**Absolute paths always work:**
-```
-/Users/alex/GolandProjects/brizy-go-services/services/symbols/internal/biz/symbols.go
+**Example**:
+```go
+import v1 "contracts/gen/symbols/v1"
 ```
 
-**Relative paths depend on current directory:**
-```
-# From service directory
-internal/biz/symbols.go
+### Platform Utilities
 
-# From root
-services/symbols/internal/biz/symbols.go
-```
-</working_directory>
+**Location**: \`platform/{package}/\`
 
-<success_criteria>
-You can successfully use this skill when you:
-- Instantly know where to find any component type
-- Can construct correct paths for new files following conventions
-- Understand the relationship between layers and their locations
-- Know which directory to run commands from
-- Can navigate between workspace modules correctly
-</success_criteria>
+**Packages**:
+- \`platform/middleware\` - Request ID middleware
+- \`platform/pagination\` - Pagination utilities
+- \`platform/adapters\` - Common adapters
+
+**Import Examples**:
+```go
+import "platform/pagination"
+import "platform/middleware"
+```
+
+## Path Resolution Rules
+
+### 1. Service-Specific Code
+
+Pattern: \`services/{service}/internal/{layer}/{file}.go\`
+
+Examples:
+- Business logic: \`services/symbols/internal/biz/symbols.go\`
+- Repository: \`services/symbols/internal/data/repo/symbol.go\`
+- GORM model: \`services/symbols/internal/data/model/symbol.go\`
+- Service handler: \`services/symbols/internal/service/symbols.go\`
+
+### 2. Test Files
+
+Pattern: \`{same_path_as_implementation}_test.go\`
+
+Examples:
+- \`services/symbols/internal/biz/symbols_test.go\`
+- \`services/symbols/internal/data/repo/symbol_test.go\`
+- \`services/symbols/internal/service/symbols_test.go\`
+
+### 3. Proto Definitions
+
+**Source**: \`api/{service}/v1/{service}.proto\`
+**Generated**: \`contracts/gen/{service}/v1/\`
+
+### 4. Configuration
+
+**Proto Schema**: \`services/{service}/internal/conf/conf.proto\`
+**Runtime Config**: \`services/{service}/configs/config.yaml\`
+
+## Quick Reference Table
+
+| What | Path Pattern | Example |
+|------|-------------|---------|
+| Use case interface | \`services/{service}/internal/biz/interfaces.go\` | \`services/symbols/internal/biz/interfaces.go\` |
+| Use case implementation | \`services/{service}/internal/biz/{entity}.go\` | \`services/symbols/internal/biz/symbols.go\` |
+| Business models | \`services/{service}/internal/biz/models.go\` | \`services/symbols/internal/biz/models.go\` |
+| GORM entity | \`services/{service}/internal/data/model/{entity}.go\` | \`services/symbols/internal/data/model/symbol.go\` |
+| Repository | \`services/{service}/internal/data/repo/{entity}.go\` | \`services/symbols/internal/data/repo/symbol.go\` |
+| Service handler | \`services/{service}/internal/service/{entity}.go\` | \`services/symbols/internal/service/symbols.go\` |
+| Mapper | \`services/{service}/internal/service/mapper.go\` | \`services/symbols/internal/service/mapper.go\` |
+| Wire config | \`services/{service}/cmd/{service}/wire.go\` | \`services/symbols/cmd/symbols/wire.go\` |
+| Main entry | \`services/{service}/cmd/{service}/main.go\` | \`services/symbols/cmd/symbols/main.go\` |
+| Proto def | \`api/{service}/v1/{service}.proto\` | \`api/symbols/v1/symbols.proto\` |
+| Generated proto | \`contracts/gen/{service}/v1/{service}.pb.go\` | \`contracts/gen/symbols/v1/symbols.pb.go\` |
+
+## Import Path Patterns
+
+### Within Same Service
+
+```go
+// From service layer to biz layer
+import "{service}/internal/biz"
+
+// From repo to model
+import "{service}/internal/data/model"
+
+// From repo to biz (for interfaces)
+import "{service}/internal/biz"
+```
+
+### Cross-Module Imports
+
+```go
+// Platform utilities
+import "platform/pagination"
+import "platform/middleware"
+
+// Generated protobuf
+import v1 "contracts/gen/symbols/v1"
+
+// GORM
+import "gorm.io/gorm"
+
+// Kratos
+import "github.com/go-kratos/kratos/v2/log"
+```
+
+## Common Scenarios
+
+### Finding Entity Files
+
+Given entity name \`Symbol\`:
+- Business model: \`services/symbols/internal/biz/models.go\` (struct \`Symbol\`)
+- Use case: \`services/symbols/internal/biz/symbols.go\`
+- GORM entity: \`services/symbols/internal/data/model/symbol.go\` (struct \`Symbol\`)
+- Repository: \`services/symbols/internal/data/repo/symbol.go\`
+- Service handler: \`services/symbols/internal/service/symbols.go\`
+
+### Finding Tests
+
+Same directory as implementation + \`_test.go\` suffix:
+- \`services/symbols/internal/biz/symbols_test.go\`
+- \`services/symbols/internal/data/repo/symbol_test.go\`
+- \`services/symbols/internal/service/symbols_test.go\`
+
+### Finding Configuration
+
+- Schema: \`services/symbols/internal/conf/conf.proto\`
+- Runtime: \`services/symbols/configs/config.yaml\`
+- Wire DI: \`services/symbols/cmd/symbols/wire.go\`
+
+## Directory Naming Conventions
+
+- Use **singular** for: \`biz\`, \`data\`, \`service\`, \`server\`, \`conf\`
+- Use **plural** for: \`services\`, \`configs\`, \`contracts\`
+- Use **snake_case** for: multi-word directories (e.g., \`symbol_data\`)
+- Use **lowercase** throughout
+
+## File Naming Conventions
+
+- Use **singular entity name**: \`symbol.go\` (not \`symbols.go\`) for model/repo
+- Use **plural entity name**: \`symbols.go\` for use case/service (matches proto)
+- Use **snake_case**: \`symbol_data.go\`
+- Tests: \`{filename}_test.go\`
+

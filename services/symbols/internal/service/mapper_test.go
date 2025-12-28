@@ -285,7 +285,7 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 			wantErr: false,
 			expected: &biz.ListSymbolsOptions{
 				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
+				Pagination: pagination.OffsetPaginationParams{
 					Offset: 10,
 					Limit:  20,
 				},
@@ -301,7 +301,7 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 			wantErr: false,
 			expected: &biz.ListSymbolsOptions{
 				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
+				Pagination: pagination.OffsetPaginationParams{
 					Offset: 0,
 					Limit:  20, // Default value
 				},
@@ -317,7 +317,7 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 			wantErr: false,
 			expected: &biz.ListSymbolsOptions{
 				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
+				Pagination: pagination.OffsetPaginationParams{
 					Offset: 0,
 					Limit:  10,
 				},

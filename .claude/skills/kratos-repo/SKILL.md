@@ -1,277 +1,343 @@
 ---
-name: kratos-repo
+skill_name: kratos-repo
 description: Implements go-kratos data layer repositories following Clean Architecture patterns with GORM, transactions, pagination, and error handling. Use when adding new data access layers to kratos microservices that need database persistence.
+tags: [kratos, repository, gorm, clean-architecture, data-layer]
+version: 1.0.0
+last_updated: 2025-12-28
 ---
 
-<objective>
-Generate a complete, production-ready repository implementation for a go-kratos microservice that follows Clean Architecture principles with proper transaction handling, error mapping, pagination support, and data transformation.
-</objective>
+# Kratos Repository Implementation Skill
 
-<context>
-Repositories in go-kratos implement the data layer following Clean Architecture: they live in `internal/data/repo/`, implement interfaces from `internal/biz/interfaces.go`, and transform between data models (`internal/data/model/`) and domain models (`internal/biz/models.go`) while handling transactions and error mapping.
-</context>
+## Purpose
 
-<quick_start>
-To generate a repository for an entity named "Product":
+Generate repository implementations that handle data persistence using GORM while adhering to Clean Architecture principles. Repositories implement interfaces defined in the business layer (\`biz\`).
 
-1. Confirm `ProductRepo` interface exists in `internal/biz/interfaces.go`
-2. Confirm `model.Product` exists in `internal/data/model/`
-3. Confirm `biz.Product` domain model exists in `internal/biz/models.go`
-4. Request: "Create repository for Product entity with Create, Update, FindByID, Delete, and ListProducts with pagination"
-5. Skill generates `internal/data/repo/product.go` with all CRUD operations
-6. Add constructor to `data.ProviderSet` in `internal/data/data.go`
-7. Run `make generate` to wire dependencies
-</quick_start>
+## Essential Patterns
 
-<validation>
-Before generating repository, verify:
-
-- Entity interface exists in `internal/biz/interfaces.go` (e.g., `ProductRepo`)
-- Domain model exists in `internal/biz/models.go` (e.g., `Product`)
-- Entity model exists in `internal/data/model/` (e.g., `model.Product`)
-- Service imports match pattern: `<service-name>/internal/...`
-- Required packages are available: `gorm.io/gorm`, `github.com/go-kratos/kratos/v2/log`
-- If pagination needed: `internal/pkg/pagination` package exists
-</validation>
-
-<process>
-<step name="gather_requirements">
-Ask the user for the entity name (e.g., "Symbol", "User", "Product"). This will be used throughout the implementation.
-
-Confirm these assumptions:
-- Repository will implement an interface from `internal/biz/interfaces.go`
-- Entity model exists in `internal/data/model/`
-- Domain model exists in `internal/biz/models.go`
-- Common CRUD operations needed: Create, Update, FindByID, Delete
-- List operation with pagination needed (yes/no)
-</step>
-
-<step name="create_repository_file">
-Create `internal/data/repo/<entity_lowercase>.go` with package declaration and imports:
+### 1. Repository Structure
 
 ```go
 package repo
 
 import (
     "context"
-    "errors"
-    "strings"
-    "<service-name>/internal/biz"
-    "<service-name>/internal/data/common"
-    "<service-name>/internal/data/model"
-    "<service-name>/internal/pkg/pagination"  // Only if pagination needed
-
+    "platform/pagination"
+    "{service}/internal/biz"
+    "{service}/internal/data/model"
     "github.com/go-kratos/kratos/v2/log"
     "gorm.io/gorm"
 )
-```
-</step>
 
-<step name="generate_constructor_and_struct">
-Create the constructor and struct following naming conventions:
-
-```go
-// New<Entity>Repo creates a new repository instance.
-func New<Entity>Repo(db *gorm.DB, tx common.Transaction, logger log.Logger) biz.<Entity>Repo {
-    return &<entity>Repo{
+// Constructor function
+func New{Entity}Repo(db *gorm.DB, tx common.Transaction, logger log.Logger) biz.{Entity}Repo {
+    return &{entity}Repo{
         db:  db,
         tx:  tx,
         log: log.NewHelper(logger),
     }
 }
 
-type <entity>Repo struct {
+// Private struct
+type {entity}Repo struct {
     db  *gorm.DB
     tx  common.Transaction
     log *log.Helper
 }
 ```
 
-**Naming rules:**
-- Constructor: `New<Entity>Repo` (PascalCase, exported)
-- Struct: `<entity>Repo` (camelCase, unexported)
-- Fields: `db`, `tx`, `log` (exactly these names)
-- Receiver: `r` (single letter)
-</step>
+### 2. CRUD Operations Pattern
 
-<step name="implement_crud_operations">
-Implement the requested CRUD operations. For each operation:
+#### Create Operation
+```go
+func (r *{entity}Repo) Create(ctx context.Context, s *biz.{Entity}) (*biz.{Entity}, error) {
+    entity := toEntity{Entity}(s)
+    
+    // Use FullSaveAssociations for nested relationships
+    if err := r.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Create(entity).Error; err != nil {
+        r.log.WithContext(ctx).Errorf("Failed to save {entity}: %v", err)
+        return nil, r.mapGormError(err)
+    }
+    
+    return toDomain{Entity}(entity), nil
+}
+```
 
-**Create:** Use transaction with `FullSaveAssociations`, rollback on error
-**Update:** Use transaction, check `RowsAffected == 0`, fetch and return updated entity
-**FindByID:** No transaction, use `Preload()` for relationships
-**Delete:** Use transaction, check `RowsAffected == 0`
-**List:** No transaction, separate count and data queries, calculate pagination metadata
+#### Update Operation
+```go
+func (r *{entity}Repo) Update(ctx context.Context, entity *biz.{Entity}) (*biz.{Entity}, error) {
+    // Transform to GORM entity
+    e := toEntity{Entity}(entity)
+    
+    // Update with FullSaveAssociations
+    result := r.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Model(&model.{Entity}{}).Where("id = ?", entity.Id).Updates(e)
+    if result.Error != nil {
+        return nil, r.mapGormError(result.Error)
+    }
+    if result.RowsAffected == 0 {
+        return nil, biz.ErrNotFound
+    }
+    
+    // Return fresh data
+    return r.FindByID(ctx, entity.Id)
+}
+```
 
-All write operations (Create/Update/Delete) must:
-- Begin explicit transaction with `r.db.WithContext(ctx).Begin()`
-- Defer panic recovery with rollback
-- Rollback on any error
-- Commit at the end
+#### FindByID Operation
+```go
+func (r *{entity}Repo) FindByID(ctx context.Context, id uint64) (*biz.{Entity}, error) {
+    var entity *model.{Entity}
+    
+    err := r.db.WithContext(ctx).
+        Preload("{RelationshipField}").  // Preload relationships
+        Where("id = ?", id).
+        First(&entity).Error
+    
+    if err != nil {
+        r.log.WithContext(ctx).Errorf("Failed to find {entity} by ID %d: %v", id, err)
+        return nil, r.mapGormError(err)
+    }
+    
+    return toDomain{Entity}(entity), nil
+}
+```
 
-All read operations (FindByID/List) must:
-- Use `r.db.WithContext(ctx)` directly (no transaction)
-- Use `Preload()` for eager loading relationships
+#### List with Pagination and Filters
+```go
+func (r *{entity}Repo) List{Entities}(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*biz.{Entity}, *pagination.Meta, error) {
+    var entities []*model.{Entity}
+    var totalCount int64
+    
+    // Base query
+    query := r.db.WithContext(ctx).Model(&model.{Entity}{})
+    
+    // Apply filters BEFORE count and find
+    if filter != nil && len(filter) > 0 {
+        query = query.Where(filter)
+    }
+    
+    // Count with filters applied
+    if err := query.Count(&totalCount).Error; err != nil {
+        r.log.WithContext(ctx).Errorf("Failed to count: %v", err)
+        return nil, nil, r.mapGormError(err)
+    }
+    
+    // Apply pagination
+    query = query.Limit(int(limit)).Offset(int(offset))
+    
+    // Execute query
+    if err := query.Find(&entities).Error; err != nil {
+        r.log.WithContext(ctx).Errorf("Failed to list: %v", err)
+        return nil, nil, r.mapGormError(err)
+    }
+    
+    // Transform to domain
+    results := make([]*biz.{Entity}, 0, len(entities))
+    for _, e := range entities {
+        results = append(results, toDomain{Entity}(e))
+    }
+    
+    // Build metadata
+    meta := &pagination.Meta{
+        TotalCount:      uint64(totalCount),
+        Offset:          offset,
+        Limit:           limit,
+        HasNextPage:     offset+uint64(len(entities)) < uint64(totalCount),
+        HasPreviousPage: offset > 0,
+    }
+    
+    return results, meta, nil
+}
+```
 
-See `references/crud-templates.md` for complete code templates for each operation.
-</step>
+#### Delete Operation
+```go
+func (r *{entity}Repo) Delete(ctx context.Context, id uint64) error {
+    result := r.db.WithContext(ctx).Delete(&model.{Entity}{}, id)
+    if result.Error != nil {
+        r.log.WithContext(ctx).Errorf("Failed to delete: %v", result.Error)
+        return r.mapGormError(result.Error)
+    }
+    if result.RowsAffected == 0 {
+        return biz.ErrNotFound
+    }
+    return nil
+}
+```
 
-<step name="add_error_mapping">
-Add error mapping helpers:
+### 3. Error Mapping Pattern
+
+CRITICAL: Always map GORM errors to business layer errors
 
 ```go
-func (r *<entity>Repo) mapGormError(err error) error {
+func (r *{entity}Repo) mapGormError(err error) error {
     if err == nil {
         return nil
     }
+    
     if errors.Is(err, gorm.ErrRecordNotFound) {
         return biz.ErrNotFound
     }
-    if r.isDuplicateKeyError(err) {
+    
+    if isDuplicateKeyError(err) {
         return biz.ErrDuplicateEntry
     }
+    
     return biz.ErrDatabase
 }
 
-func (r *<entity>Repo) isDuplicateKeyError(err error) bool {
-    errMsg := err.Error()
-    return strings.Contains(errMsg, "Error 1062") ||
-        strings.Contains(errMsg, "Duplicate entry")
+func isDuplicateKeyError(err error) bool {
+    if err == nil {
+        return false
+    }
+    errMsg := strings.ToLower(err.Error())
+    return strings.Contains(errMsg, "duplicate") || 
+           strings.Contains(errMsg, "unique constraint") ||
+           strings.Contains(errMsg, "error 1062")
 }
 ```
 
-**Error mapping:**
-- `gorm.ErrRecordNotFound` → `biz.ErrNotFound`
-- MySQL "Error 1062" or "Duplicate entry" → `biz.ErrDuplicateEntry`
-- All other errors → `biz.ErrDatabase`
+### 4. Mapper Functions
 
-See `references/error-handling.md` for complete error handling patterns.
-</step>
-
-<step name="add_data_transformers">
-Add data transformation functions:
+Always provide bidirectional mappers between domain and entity:
 
 ```go
-func toDomain<Entity>(e *model.<Entity>) *biz.<Entity> {
-    if e == nil {
-        return nil
-    }
-    // Map all fields from model to domain
-    // Handle nested relationships with nil checks
-    return &biz.<Entity>{...}
-}
-
-func toEntity<Entity>(d *biz.<Entity>) *model.<Entity> {
+// Domain to Entity
+func toEntity{Entity}(d *biz.{Entity}) *model.{Entity} {
     if d == nil {
         return nil
     }
-    // Map all fields from domain to model
-    // Handle nested relationships with nil checks
-    return &model.<Entity>{...}
+    
+    entity := &model.{Entity}{
+        ProjectID: d.Project,
+        Field1:    d.Field1,
+        Field2:    d.Field2,
+    }
+    
+    // Handle nested relationships
+    if d.RelatedData != nil {
+        entity.RelatedData = &model.RelatedData{
+            Field: d.RelatedData.Field,
+            Data:  d.RelatedData.Data,
+        }
+    }
+    
+    return entity
+}
+
+// Entity to Domain
+func toDomain{Entity}(e *model.{Entity}) *biz.{Entity} {
+    if e == nil {
+        return nil
+    }
+    
+    domain := &biz.{Entity}{
+        Id:      e.ID,
+        Project: e.ProjectID,
+        Field1:  e.Field1,
+        Field2:  e.Field2,
+    }
+    
+    // Handle nested relationships
+    if e.RelatedData != nil {
+        domain.RelatedData = &biz.RelatedData{
+            Id:      e.RelatedData.ID,
+            Project: e.RelatedData.ProjectID,
+            Field:   e.RelatedData.Field,
+            Data:    e.RelatedData.Data,
+        }
+    }
+    
+    return domain
 }
 ```
 
-**Transformation rules:**
-- Function names: `toDomain<Entity>` and `toEntity<Entity>` (unexported)
-- Always check for nil at the start
-- Map ID fields: `model.ID` ↔ `biz.Id` (note capitalization difference)
-- Handle nested relationships with nil checks
-</step>
+## Critical Rules
 
-<step name="update_provider_set">
-Add the repository constructor to `internal/data/data.go`:
-
+### Context Propagation
+ALWAYS use \`WithContext(ctx)\` for all database operations:
 ```go
-var ProviderSet = wire.NewSet(
-    NewDB,
-    NewData,
-    NewTransaction,
-    repo.New<Entity>Repo,  // Add this line
-)
+r.db.WithContext(ctx).Find(&entities)  // ✅ Correct
+r.db.Find(&entities)                    // ❌ Wrong - no context
 ```
-</step>
 
-<step name="verify_wire_integration">
-Run `make generate` to regenerate wire dependency injection. The constructor will be automatically wired with:
-- `db *gorm.DB` from `NewDB`
-- `tx common.Transaction` from `NewTransaction`
-- `logger log.Logger` from app initialization
-</step>
-</process>
-
-<error_handling>
-All repository methods must follow these error handling patterns:
-
-<pattern name="error_logging">
-Every error must be logged before returning:
-
+### FullSaveAssociations
+Use for Create/Update operations with nested relationships:
 ```go
-if err != nil {
-    r.log.WithContext(ctx).Errorf("Failed to <operation> <entity>: %v", err)
-    return nil, r.mapGormError(err)
+Session(&gorm.Session{FullSaveAssociations: true})
+```
+
+### Filter Application
+Apply filters BEFORE both count and find queries:
+```go
+query := r.db.WithContext(ctx).Model(&model.Entity{})
+if filter != nil && len(filter) > 0 {
+    query = query.Where(filter)  // Apply first
 }
+query.Count(&totalCount)          // Count filtered results
+query.Limit(...).Find(&entities)  // Find filtered results
 ```
-</pattern>
 
-<pattern name="error_mapping">
-All GORM errors must be mapped through `mapGormError()`:
-- `gorm.ErrRecordNotFound` → `biz.ErrNotFound`
-- MySQL duplicate key (Error 1062) → `biz.ErrDuplicateEntry`
-- All other errors → `biz.ErrDatabase`
-</pattern>
+### Error Handling
+1. Log all errors with context
+2. Map GORM errors to business errors
+3. Check RowsAffected for Update/Delete operations
 
-<pattern name="rows_affected_check">
-Update and Delete operations must check for zero rows:
-
+### Logging Pattern
 ```go
-if result.RowsAffected == 0 {
-    r.log.WithContext(ctx).Errorf("Failed to <operation> <entity>: 0 rows affected")
-    tx.Rollback()
-    return biz.ErrNotFound
-}
+r.log.WithContext(ctx).Errorf("Failed to {operation}: %v", err)
 ```
-</pattern>
 
-<pattern name="transaction_rollback">
-All write operations must rollback on error:
+## File Structure
 
-```go
-if err := tx.Create(entity).Error; err != nil {
-    tx.Rollback()
-    r.log.WithContext(ctx).Errorf("Failed to save <entity>: %v", err)
-    return nil, r.mapGormError(err)
-}
 ```
-</pattern>
+services/{service}/internal/data/repo/
+├── {entity}.go              # Repository implementation
+├── {entity}_test.go         # Repository tests
+└── mapper.go or helpers     # Optional separate mapper file
+```
 
-For detailed error handling patterns, see `references/error-handling.md`.
-</error_handling>
+## Validation Checklist
 
-<references>
-For detailed guidance on specific topics, see:
+- [ ] Constructor function returns interface type (\`biz.{Entity}Repo\`)
+- [ ] All DB operations use \`WithContext(ctx)\`
+- [ ] Create/Update use \`FullSaveAssociations\` if nested data exists
+- [ ] Update checks \`RowsAffected == 0\` for not found
+- [ ] Delete checks \`RowsAffected == 0\` for not found
+- [ ] All errors are logged with context
+- [ ] GORM errors are mapped to business layer errors
+- [ ] FindByID preloads related entities
+- [ ] List applies filters before count and find
+- [ ] List returns pagination metadata
+- [ ] Mappers handle nil inputs safely
+- [ ] Mappers transform nested relationships
 
-- **references/naming-conventions.md**: Strict naming rules for structs, fields, methods, and helpers
-- **references/transaction-patterns.md**: Transaction handling for write vs read operations
-- **references/error-handling.md**: Error mapping, logging, and RowsAffected checks
-- **references/crud-templates.md**: Complete code templates for all CRUD operations
-- **references/complete-examples.md**: Full working repository implementations
-</references>
+## Anti-Patterns
 
-<success_criteria>
-Repository implementation is complete when:
+❌ **DON'T:**
+- Return GORM errors directly to business layer
+- Forget context propagation (\`WithContext\`)
+- Apply filters only to find, not count
+- Ignore \`RowsAffected\` in Update/Delete
+- Use value receivers (use pointer receivers)
+- Forget to preload relationships in FindByID
 
-- File created at `internal/data/repo/<entity_lowercase>.go`
-- Package declaration is `package repo`
-- Constructor follows pattern: `func New<Entity>Repo(db *gorm.DB, tx common.Transaction, logger log.Logger) biz.<Entity>Repo`
-- Struct has exactly three fields: `db`, `tx`, `log`
-- All write operations (Create/Update/Delete) use explicit transactions
-- All read operations use `r.db.WithContext(ctx)` without transactions
-- Update and Delete check `RowsAffected == 0` and return `biz.ErrNotFound`
-- All errors are logged with context before returning
-- All GORM errors are mapped through `mapGormError()`
-- Pagination calculates `HasNextPage` and `HasPreviousPage` correctly
-- Data transformers handle nil checks
-- Repository constructor added to `data.ProviderSet` in `internal/data/data.go`
-- `make generate` runs successfully and generates wire bindings
-- Code follows exact naming conventions (case-sensitive)
-</success_criteria>
+✅ **DO:**
+- Make sure the repo implements the interface defined in the business layer
+- Always map errors to business layer types
+- Use context for all database operations
+- Apply filters to both count and find queries
+- Check \`RowsAffected\` for Update/Delete
+- Use pointer receivers for struct methods
+- Preload relationships when needed
+
+## Success Criteria
+
+Repository MUST:
+1. Implement all methods from business layer interface
+2. Pass all unit tests with proper error handling
+3. Support soft deletes (via BaseModel)
+4. Handle pagination correctly with accurate metadata
+5. Transform all data between entity and domain models
+6. Log errors appropriately with context
+7. Map all GORM errors to business errors
+

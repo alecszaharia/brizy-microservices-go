@@ -43,15 +43,15 @@ func (m *MockSymbolRepo) FindByID(ctx context.Context, id uint64) (*Symbol, erro
 	return args.Get(0).(*Symbol), args.Error(1)
 }
 
-func (m *MockSymbolRepo) ListSymbols(ctx context.Context, options *ListSymbolsOptions) ([]*Symbol, *pagination.PaginationMeta, error) {
-	args := m.Called(ctx, options)
+func (m *MockSymbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*Symbol, *pagination.Meta, error) {
+	args := m.Called(ctx, offset, limit, filter)
 	if args.Get(0) == nil {
 		return nil, nil, args.Error(2)
 	}
 	if args.Get(1) == nil {
 		return args.Get(0).([]*Symbol), nil, args.Error(2)
 	}
-	return args.Get(0).([]*Symbol), args.Get(1).(*pagination.PaginationMeta), args.Error(2)
+	return args.Get(0).([]*Symbol), args.Get(1).(*pagination.Meta), args.Error(2)
 }
 
 func (m *MockSymbolRepo) Delete(ctx context.Context, id uint64) error {
@@ -564,35 +564,34 @@ func TestDeleteSymbol(t *testing.T) {
 func TestListSymbols(t *testing.T) {
 	tests := []struct {
 		name        string
-		options     *ListSymbolsOptions
-		mockSetup   func(*MockSymbolRepo, context.Context, *ListSymbolsOptions)
+		params      *pagination.OffsetPaginationParams
+		filter      map[string]interface{}
+		mockSetup   func(*MockSymbolRepo, context.Context, uint64, uint32, map[string]interface{})
 		wantErr     bool
 		errContains string
-		checkResult func(*testing.T, []*Symbol, *pagination.PaginationMeta)
+		checkResult func(*testing.T, []*Symbol, *pagination.Meta)
 	}{
 		{
 			name: "success - first page",
-			options: &ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 0,
-					Limit:  10,
-				},
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  10,
 			},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, options *ListSymbolsOptions) {
+			filter: map[string]interface{}{"project_id": uint64(1)},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
 				symbol := validSymbol()
 				expectedSymbols := []*Symbol{symbol}
-				expectedMeta := &pagination.PaginationMeta{
+				expectedMeta := &pagination.Meta{
 					TotalCount:      1,
 					Offset:          0,
 					Limit:           10,
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				repo.On("ListSymbols", ctx, options).Return(expectedSymbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.PaginationMeta) {
+			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
 				assert.NotNil(t, symbols)
 				assert.Len(t, symbols, 1)
 				assert.NotNil(t, meta)
@@ -605,29 +604,27 @@ func TestListSymbols(t *testing.T) {
 		},
 		{
 			name: "success - with next page",
-			options: &ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 0,
-					Limit:  10,
-				},
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  10,
 			},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, options *ListSymbolsOptions) {
+			filter: map[string]interface{}{"project_id": uint64(1)},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
 				symbols := make([]*Symbol, 10)
 				for i := 0; i < 10; i++ {
 					symbols[i] = validSymbol()
 				}
-				expectedMeta := &pagination.PaginationMeta{
+				expectedMeta := &pagination.Meta{
 					TotalCount:      25,
 					Offset:          0,
 					Limit:           10,
 					HasNextPage:     true,
 					HasPreviousPage: false,
 				}
-				repo.On("ListSymbols", ctx, options).Return(symbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return(symbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.PaginationMeta) {
+			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
 				assert.NotNil(t, symbols)
 				assert.Len(t, symbols, 10)
 				assert.NotNil(t, meta)
@@ -638,29 +635,27 @@ func TestListSymbols(t *testing.T) {
 		},
 		{
 			name: "success - second page",
-			options: &ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 10,
-					Limit:  10,
-				},
+			params: &pagination.OffsetPaginationParams{
+				Offset: 10,
+				Limit:  10,
 			},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, options *ListSymbolsOptions) {
+			filter: map[string]interface{}{"project_id": uint64(1)},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
 				symbols := make([]*Symbol, 10)
 				for i := 0; i < 10; i++ {
 					symbols[i] = validSymbol()
 				}
-				expectedMeta := &pagination.PaginationMeta{
+				expectedMeta := &pagination.Meta{
 					TotalCount:      25,
 					Offset:          10,
 					Limit:           10,
 					HasNextPage:     true,
 					HasPreviousPage: true,
 				}
-				repo.On("ListSymbols", ctx, options).Return(symbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return(symbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.PaginationMeta) {
+			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
 				assert.NotNil(t, symbols)
 				assert.NotNil(t, meta)
 				assert.True(t, meta.HasNextPage)
@@ -669,25 +664,23 @@ func TestListSymbols(t *testing.T) {
 		},
 		{
 			name: "success - empty result",
-			options: &ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 0,
-					Limit:  20,
-				},
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  20,
 			},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, options *ListSymbolsOptions) {
-				expectedMeta := &pagination.PaginationMeta{
+			filter: map[string]interface{}{"project_id": uint64(999)},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+				expectedMeta := &pagination.Meta{
 					TotalCount:      0,
 					Offset:          0,
 					Limit:           20,
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				repo.On("ListSymbols", ctx, options).Return([]*Symbol{}, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return([]*Symbol{}, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.PaginationMeta) {
+			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
 				assert.NotNil(t, symbols)
 				assert.Len(t, symbols, 0)
 				assert.NotNil(t, meta)
@@ -695,42 +688,113 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name: "missing project id",
-			options: &ListSymbolsOptions{
-				ProjectID: 0,
-				Pagination: pagination.PaginationParams{
-					Offset: 0,
-					Limit:  10,
-				},
-			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, options *ListSymbolsOptions) {},
-			wantErr:     true,
-			errContains: "ProjectID",
-		},
-		{
 			name: "limit too large",
-			options: &ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 0,
-					Limit:  101,
-				},
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  101,
 			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, options *ListSymbolsOptions) {},
+			filter: map[string]interface{}{"project_id": uint64(1)},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			},
 			wantErr:     true,
 			errContains: "Limit",
 		},
 		{
 			name: "repository error",
-			options: &ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 0,
-					Limit:  10,
-				},
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  10,
 			},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, options *ListSymbolsOptions) {
-				repo.On("ListSymbols", ctx, options).Return(nil, nil, errors.New("database error"))
+			filter: map[string]interface{}{"project_id": uint64(1)},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return(nil, nil, errors.New("database error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "success - passes nil filter to repository",
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  10,
+			},
+			filter: nil,
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+				symbol := validSymbol()
+				expectedSymbols := []*Symbol{symbol}
+				expectedMeta := &pagination.Meta{
+					TotalCount:      1,
+					Offset:          0,
+					Limit:           10,
+					HasNextPage:     false,
+					HasPreviousPage: false,
+				}
+				// Verify nil filter is passed through
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 1)
+			},
+		},
+		{
+			name: "success - passes empty filter to repository",
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  10,
+			},
+			filter: map[string]interface{}{},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+				symbol := validSymbol()
+				expectedSymbols := []*Symbol{symbol}
+				expectedMeta := &pagination.Meta{
+					TotalCount:      1,
+					Offset:          0,
+					Limit:           10,
+					HasNextPage:     false,
+					HasPreviousPage: false,
+				}
+				// Verify empty map is passed through
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 1)
+			},
+		},
+		{
+			name: "success - multiple filters passed through",
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  10,
+			},
+			filter: map[string]interface{}{"project_id": uint64(1), "label": "test-label", "version": uint32(2)},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+				symbol := validSymbol()
+				expectedSymbols := []*Symbol{symbol}
+				expectedMeta := &pagination.Meta{
+					TotalCount:      1,
+					Offset:          0,
+					Limit:           10,
+					HasNextPage:     false,
+					HasPreviousPage: false,
+				}
+				// Verify all filter keys are preserved
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 1)
+			},
+		},
+		{
+			name: "error - repository error with filter",
+			params: &pagination.OffsetPaginationParams{
+				Offset: 0,
+				Limit:  10,
+			},
+			filter: map[string]interface{}{"project_id": uint64(1), "label": "test"},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return(nil, nil, errors.New("database error"))
 			},
 			wantErr: true,
 		},
@@ -742,9 +806,9 @@ func TestListSymbols(t *testing.T) {
 			uc := setupSymbolUseCase(mockRepo)
 			ctx := context.Background()
 
-			tt.mockSetup(mockRepo, ctx, tt.options)
+			tt.mockSetup(mockRepo, ctx, tt.params.Offset, tt.params.Limit, tt.filter)
 
-			symbols, meta, err := uc.ListSymbols(ctx, tt.options)
+			symbols, meta, err := uc.ListSymbols(ctx, tt.params, tt.filter)
 
 			if tt.wantErr {
 				assert.Error(t, err)

@@ -10,8 +10,8 @@ type SymbolData struct {
 
 // ListSymbolsOptions contains parameters for listing symbols
 type ListSymbolsOptions struct {
-	ProjectID  uint64                      `validate:"required,gt=0"`
-	Pagination pagination.PaginationParams `validate:"required"`
+	ProjectID  uint64                            `validate:"required,gt=0"`
+	Pagination pagination.OffsetPaginationParams `validate:"required"`
 }
 
 type Symbol struct {

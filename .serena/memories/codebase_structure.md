@@ -13,7 +13,7 @@ brizy-go-services/
 │   ├── pagination/      # Offset-based pagination
 │   └── adapters/        # Common transformers
 ├── services/            # Microservices
-│   └── symbols/         # Symbol management service
+│   └── {service}/         # Symbol management service
 ├── api/                 # Proto definitions
 │   └── {service}/v1/    # Service API protobuf files
 ├── Makefile             # Root-level contracts commands

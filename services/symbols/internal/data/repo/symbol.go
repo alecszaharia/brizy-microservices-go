@@ -75,24 +75,26 @@ func (r *symbolRepo) FindByID(ctx context.Context, id uint64) (*biz.Symbol, erro
 	return toDomainSymbol(symbol), nil
 }
 
-func (r *symbolRepo) ListSymbols(ctx context.Context, options *biz.ListSymbolsOptions) ([]*biz.Symbol, *pagination.PaginationMeta, error) {
+func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*biz.Symbol, *pagination.Meta, error) {
 	var symbolEntities []*model.Symbol
 	var totalCount int64
 
-	// Base query with project filter
-	baseQuery := r.db.WithContext(ctx).Model(&model.Symbol{}).Where("project_id = ?", options.ProjectID)
+	// Base query with context
+	query := r.db.WithContext(ctx).Model(&model.Symbol{})
 
-	// Execute count query for total_count
-	if err := baseQuery.Count(&totalCount).Error; err != nil {
+	// Apply filters if provided (both count and find queries will use this)
+	if filter != nil && len(filter) > 0 {
+		query = query.Where(filter)
+	}
+
+	// Count total records WITH filters applied
+	if err := query.Count(&totalCount).Error; err != nil {
 		r.log.WithContext(ctx).Errorf("Failed to count symbols: %v", err)
 		return nil, nil, r.mapGormError(err)
 	}
 
-	// Execute data query with pagination
-	query := baseQuery.
-		Limit(int(options.Pagination.Limit)).  // Limit results
-		Offset(int(options.Pagination.Offset)) // Skip offset records
-	//Preload("SymbolData")                   // Eagerly load symbol data - I think this should not be loaded for list
+	// Apply pagination to the query
+	query = query.Limit(int(limit)).Offset(int(offset))
 
 	if err := query.Find(&symbolEntities).Error; err != nil {
 		r.log.WithContext(ctx).Errorf("Failed to list symbols: %v", err)
@@ -105,13 +107,13 @@ func (r *symbolRepo) ListSymbols(ctx context.Context, options *biz.ListSymbolsOp
 		symbols = append(symbols, toDomainSymbol(entity))
 	}
 
-	// Calculate pagination metadata
-	meta := &pagination.PaginationMeta{
+	// Calculate paginationParams metadata
+	meta := &pagination.Meta{
 		TotalCount:      uint64(totalCount),
-		Offset:          options.Pagination.Offset,
-		Limit:           options.Pagination.Limit,
-		HasNextPage:     options.Pagination.Offset+uint64(len(symbolEntities)) < uint64(totalCount),
-		HasPreviousPage: options.Pagination.Offset > 0,
+		Offset:          offset,
+		Limit:           limit,
+		HasNextPage:     offset+uint64(len(symbolEntities)) < uint64(totalCount),
+		HasPreviousPage: offset > 0,
 	}
 
 	return symbols, meta, nil

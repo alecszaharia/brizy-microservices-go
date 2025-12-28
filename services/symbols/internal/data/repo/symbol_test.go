@@ -333,20 +333,18 @@ func TestFindByID(t *testing.T) {
 func TestListSymbols(t *testing.T) {
 	tests := []struct {
 		name        string
-		options     *biz.ListSymbolsOptions
+		offset      uint64
+		limit       uint32
+		filter      map[string]interface{}
 		setup       func(*gorm.DB)
 		wantErr     bool
-		checkResult func(*testing.T, []*biz.Symbol, *pagination.PaginationMeta)
+		checkResult func(*testing.T, []*biz.Symbol, *pagination.Meta)
 	}{
 		{
-			name: "success - first page with next page",
-			options: &biz.ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 0,
-					Limit:  5,
-				},
-			},
+			name:   "success - first page with next page",
+			offset: 0,
+			limit:  5,
+			filter: map[string]interface{}{"project_id": uint64(1)},
 			setup: func(db *gorm.DB) {
 				for i := 0; i < 10; i++ {
 					entity := validEntitySymbol()
@@ -355,7 +353,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.PaginationMeta) {
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 5)
 				assert.Equal(t, uint64(10), meta.TotalCount)
 				assert.True(t, meta.HasNextPage)
@@ -363,14 +361,10 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name: "success - second page",
-			options: &biz.ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 5,
-					Limit:  5,
-				},
-			},
+			name:   "success - second page",
+			offset: 5,
+			limit:  5,
+			filter: map[string]interface{}{"project_id": uint64(1)},
 			setup: func(db *gorm.DB) {
 				for i := 0; i < 10; i++ {
 					entity := validEntitySymbol()
@@ -379,7 +373,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.PaginationMeta) {
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 5)
 				assert.Equal(t, uint64(10), meta.TotalCount)
 				assert.False(t, meta.HasNextPage)
@@ -387,17 +381,13 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name: "success - empty results",
-			options: &biz.ListSymbolsOptions{
-				ProjectID: 999,
-				Pagination: pagination.PaginationParams{
-					Offset: 0,
-					Limit:  10,
-				},
-			},
+			name:    "success - empty results",
+			offset:  0,
+			limit:   10,
+			filter:  map[string]interface{}{"project_id": uint64(999)},
 			setup:   func(db *gorm.DB) {},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.PaginationMeta) {
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
 				assert.Empty(t, symbols)
 				assert.Equal(t, uint64(0), meta.TotalCount)
 				assert.False(t, meta.HasNextPage)
@@ -405,14 +395,10 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name: "success - last page incomplete",
-			options: &biz.ListSymbolsOptions{
-				ProjectID: 1,
-				Pagination: pagination.PaginationParams{
-					Offset: 5,
-					Limit:  10,
-				},
-			},
+			name:   "success - last page incomplete",
+			offset: 5,
+			limit:  10,
+			filter: map[string]interface{}{"project_id": uint64(1)},
 			setup: func(db *gorm.DB) {
 				for i := 0; i < 8; i++ {
 					entity := validEntitySymbol()
@@ -421,11 +407,127 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.PaginationMeta) {
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 3)
 				assert.Equal(t, uint64(8), meta.TotalCount)
 				assert.False(t, meta.HasNextPage)
 				assert.True(t, meta.HasPreviousPage)
+			},
+		},
+		{
+			name:   "success - filter by multiple fields",
+			offset: 0,
+			limit:  10,
+			filter: map[string]interface{}{"project_id": uint64(1), "label": "test-label"},
+			setup: func(db *gorm.DB) {
+				// Create symbols with matching label
+				for i := 0; i < 3; i++ {
+					entity := validEntitySymbol()
+					entity.Label = "test-label"
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+				// Create symbols with different label
+				for i := 3; i < 7; i++ {
+					entity := validEntitySymbol()
+					entity.Label = "other-label"
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 3)
+				assert.Equal(t, uint64(3), meta.TotalCount)
+				for _, s := range symbols {
+					assert.Equal(t, "test-label", s.Label)
+				}
+			},
+		},
+		{
+			name:   "success - nil filter returns all",
+			offset: 0,
+			limit:  10,
+			filter: nil,
+			setup: func(db *gorm.DB) {
+				for i := 0; i < 5; i++ {
+					entity := validEntitySymbol()
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 5)
+				assert.Equal(t, uint64(5), meta.TotalCount)
+			},
+		},
+		{
+			name:   "success - empty filter returns all",
+			offset: 0,
+			limit:  10,
+			filter: map[string]interface{}{},
+			setup: func(db *gorm.DB) {
+				for i := 0; i < 5; i++ {
+					entity := validEntitySymbol()
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 5)
+				assert.Equal(t, uint64(5), meta.TotalCount)
+			},
+		},
+		{
+			name:   "success - filter with pagination interaction",
+			offset: 2,
+			limit:  3,
+			filter: map[string]interface{}{"project_id": uint64(1)},
+			setup: func(db *gorm.DB) {
+				// Create 10 symbols for project 1
+				for i := 0; i < 10; i++ {
+					entity := validEntitySymbol()
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+				// Create 5 symbols for project 2 (should be filtered out)
+				for i := 10; i < 15; i++ {
+					entity := validEntitySymbol()
+					entity.ProjectID = 2
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 3)
+				// Total count should reflect only filtered results (10), not all records (15)
+				assert.Equal(t, uint64(10), meta.TotalCount)
+				assert.True(t, meta.HasNextPage)
+				assert.True(t, meta.HasPreviousPage)
+			},
+		},
+		{
+			name:   "success - zero results with filter",
+			offset: 0,
+			limit:  10,
+			filter: map[string]interface{}{"label": "non-existent-label"},
+			setup: func(db *gorm.DB) {
+				for i := 0; i < 5; i++ {
+					entity := validEntitySymbol()
+					entity.Label = "existing-label"
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+				assert.Empty(t, symbols)
+				assert.Equal(t, uint64(0), meta.TotalCount)
+				assert.False(t, meta.HasNextPage)
+				assert.False(t, meta.HasPreviousPage)
 			},
 		},
 	}
@@ -441,7 +543,7 @@ func TestListSymbols(t *testing.T) {
 			tx := &mockTransaction{}
 			repo := NewSymbolRepo(db, tx, logger)
 
-			symbols, meta, err := repo.ListSymbols(context.Background(), tt.options)
+			symbols, meta, err := repo.ListSymbols(context.Background(), tt.offset, tt.limit, tt.filter)
 
 			if tt.wantErr {
 				assert.Error(t, err)

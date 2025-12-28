@@ -1,177 +1,141 @@
 ---
-name: creating-gorm-entity
+skill_name: creating-gorm-entity
 description: Generates GORM entity structs with proper field tags, relationships, and table naming for go-kratos microservices. Use when adding new database models to symbol-service.
+tags: [gorm, entity, database, model, kratos]
+version: 1.0.0
+last_updated: 2025-12-28
 ---
 
-<objective>
-Generate GORM entity structs that follow the established patterns in symbol-service, including proper field tags, relationship definitions, soft deletes, and table naming conventions.
-</objective>
+# GORM Entity Creation Skill
 
-<quick_start>
-Generate a basic GORM entity with standard fields:
+## Purpose
 
-Example request: "Create a User entity with ID, Email (unique, required), Name (required), and timestamps with soft deletes"
+Generate GORM entity structs that follow the project's Clean Architecture patterns, with proper field tags, relationships, indexing strategies, and soft delete support.
 
-Expected output: Complete .go file in internal/data/model/ with proper package, imports, struct with GORM tags, JSON tags, and TableName() method.
-</quick_start>
+## Essential Patterns
 
-<essential_patterns>
-All GORM entities in symbol-service follow these core patterns:
+### 1. BaseModel Pattern
 
-<package_structure>
-```go
-package model
-
-import (
-	"time"
-	"gorm.io/gorm"  // only if using soft deletes
-)
-```
-</package_structure>
-
-<id_field>
-**Primary Key**: Always `uint64` type (not `uint` or `uint32`)
+All entities MUST embed `BaseModel` which provides:
+- `ID uint64` - Primary key with auto-increment
+- `CreatedAt time.Time` - Automatic timestamp
+- `UpdatedAt time.Time` - Automatic timestamp
+- `DeletedAt gorm.DeletedAt` - Soft delete support with index
 
 ```go
-ID uint64 `gorm:"primaryKey;autoIncrement" json:"id"`
-```
-</id_field>
-
-<required_fields>
-**Strings**: Always specify size with not null constraint
-**Numbers**: Just not null
-
-```go
-Name      string `gorm:"not null;size:255" json:"name"`
-ProjectID uint64 `gorm:"not null" json:"project_id"`
-```
-</required_fields>
-
-<unique_constraints>
-**Single**: `gorm:"uniqueIndex"`
-**Composite**: Use same index name with different priorities
-
-```go
-ProjectID uint64 `gorm:"not null;uniqueIndex:idx_project_uid,priority:1" json:"project_id"`
-UID       string `gorm:"not null;size:255;uniqueIndex:idx_project_uid,priority:2" json:"uid"`
-```
-</unique_constraints>
-
-<timestamps>
-Required on all entities:
-
-```go
-CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
-UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
-```
-</timestamps>
-
-<soft_deletes>
-Optional soft delete support:
-
-```go
-DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
-```
-</soft_deletes>
-
-<table_name_method>
-Required on all entities:
-
-```go
-func (EntityName) TableName() string {
-	return "table_name"  // snake_case plural
+type BaseModel struct {
+    ID        uint64 `gorm:"primaryKey;autoIncrement"`
+    CreatedAt time.Time
+    UpdatedAt time.Time
+    DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 ```
-</table_name_method>
 
-<field_ordering>
-Follow this order in struct definitions:
-1. ID (primary key)
-2. Foreign key IDs
-3. Business fields (UID, names, descriptive fields)
-4. Enum/status fields
-5. Numeric fields (version, counts)
-6. Relationship fields (pointers to other entities)
-7. Timestamps (CreatedAt, UpdatedAt)
-8. Soft delete (DeletedAt, if applicable)
-</field_ordering>
-</essential_patterns>
+### 2. Field Ordering Rules
 
-<references>
-For detailed guidance on specific topics, see:
+Fields MUST follow this exact order:
+1. BaseModel embedding (always first)
+2. Foreign keys (e.g., ProjectID, SymbolID)
+3. Required business fields (UID, Label, ClassName, etc.)
+4. Optional fields
+5. Relationship fields (pointer types with gorm tags)
 
-- **references/field-types.md**: Detailed field type selection (numeric, string, binary, relationships, time)
-- **references/indexing.md**: Index patterns (composite, single, unique indexes)
-- **references/relationships.md**: Relationship examples (one-to-one, cascade delete)
-- **references/naming.md**: Naming conventions (structs, fields, tables, JSON tags)
-- **references/complete-template.md**: Full entity template with all patterns
-</references>
+**Example:**
+```go
+type Symbol struct {
+    BaseModel                                    // 1. Base embedding
+    ProjectID       uint64      `gorm:"..."     // 2. Foreign key
+    UID             string      `gorm:"..."     // 3. Required fields
+    Label           string      `gorm:"..."
+    ClassName       string      `gorm:"..."
+    ComponentTarget string      `gorm:"..."
+    Version         uint32      `gorm:"..."
+    SymbolData      *SymbolData `gorm:"..."     // 4. Relationship
+}
+```
 
-<process>
-When user requests a GORM entity:
+### 3. GORM Tag Structure
 
-<gather_requirements>
-- Entity name (will be PascalCase)
-- Fields needed (name, type, constraints)
-- Relationships to other entities
-- Whether soft deletes are needed
-- Any unique constraints or composite indexes
-</gather_requirements>
+Tags MUST follow this pattern: \`gorm:"constraint1;constraint2;..." json:"field_name"\`
 
-<generate_structure>
-- Start with package and imports
-- Create struct with fields in proper order (see <field_ordering>)
-- Apply appropriate GORM tags
-- Apply JSON tags (snake_case, omitempty where needed)
-- Add timestamps (always required)
-- Add soft delete if requested
-- Add TableName() method
-</generate_structure>
+**Common constraints:**
+- \`not null\` - Required field
+- \`size:255\` - String length limit
+- \`uniqueIndex:idx_name,priority:N\` - Unique composite index
+- \`index:idx_name,priority:N\` - Non-unique composite index
+- \`foreignKey:FieldName\` - FK relationship
+- \`references:ID\` - FK reference
+- \`constraint:OnDelete:CASCADE\` - FK cascade delete
 
-<validate_patterns>
-- All IDs are `uint64`
-- All required strings have `size` specified
-- Timestamps use correct types (`time.Time`)
-- Soft delete uses `gorm.DeletedAt`
-- Foreign keys have proper cascade constraints
-- JSON tags are snake_case
-- Table name is snake_case plural
-</validate_patterns>
+**Critical indexing patterns:**
+```go
+// Composite unique index (project_id + uid)
+ProjectID uint64 \`gorm:"not null;uniqueIndex:idx_project_uid,priority:1" json:"project_id"\`
+UID       string \`gorm:"not null;size:255;uniqueIndex:idx_project_uid,priority:2" json:"uid"\`
 
-<output_location>
-**File**: `internal/data/model/{entity_name}.go`
-**Package**: `model`
-**Note**: Multiple related entities can go in same file
-</output_location>
-</process>
+// Multiple indexes on same field
+ProjectID uint64 \`gorm:"not null;uniqueIndex:idx_project_uid,priority:1;index:idx_project_id,priority:1;index:idx_symbols_project_deleted_at,priority:1" json:"project_id"\`
+```
 
-<validation_checklist>
-Before presenting the generated entity, verify:
+### 4. Relationship Patterns
 
-- [ ] Package is `model`
-- [ ] Imports include `time` and `gorm.io/gorm` (if soft delete)
-- [ ] ID field is `uint64` with `primaryKey;autoIncrement`
-- [ ] All foreign key IDs are `uint64`
-- [ ] Required strings have `not null;size:N`
-- [ ] Relationships use pointer types and proper foreign key syntax
-- [ ] Cascade delete specified for relationships: `constraint:OnDelete:CASCADE`
-- [ ] CreatedAt and UpdatedAt are `time.Time` with auto tags
-- [ ] DeletedAt (if present) is `gorm.DeletedAt` with `index` tag
-- [ ] JSON tags are snake_case
-- [ ] Optional/pointer fields have `omitempty` in JSON tags
-- [ ] TableName() method uses value receiver
-- [ ] Table name is snake_case plural
-- [ ] Fields are in logical order (ID, FKs, business, relationships, timestamps)
-</validation_checklist>
+**One-to-One with Cascade Delete:**
+```go
+type Symbol struct {
+    BaseModel
+    // ... other fields ...
+    SymbolData *SymbolData \`gorm:"foreignKey:SymbolID;references:ID;constraint:OnDelete:CASCADE" json:"symbol_data,omitempty"\`
+}
 
-<success_criteria>
-Generated entity:
-- Compiles without errors
-- Follows all naming conventions from symbol-service
-- Uses correct field types (uint64 for IDs, time.Time for timestamps)
-- Has proper GORM tags for constraints, indexes, and relationships
-- Has correct JSON tags (snake_case with appropriate omitempty)
-- Includes required timestamps
-- Has TableName() method
-- Matches the code style of existing entities in internal/data/model/symbol.go
-</success_criteria>
+type SymbolData struct {
+    BaseModel
+    SymbolID uint64  \`gorm:"not null;uniqueIndex" json:"symbol_id"\`
+    Data     *[]byte \`gorm:"not null;type:longblob" json:"data"\`
+}
+```
+
+### 5. Table Naming
+
+MUST provide explicit table name method:
+
+```go
+func (Symbol) TableName() string {
+    return "symbols"  // plural, snake_case
+}
+```
+
+## Validation Checklist
+
+When creating a GORM entity, verify:
+
+- [ ] BaseModel is embedded as first field
+- [ ] All foreign keys come before business fields  
+- [ ] Required fields have \`not null\` tag
+- [ ] String fields have \`size:N\` constraint
+- [ ] Unique combinations use \`uniqueIndex\` with priorities
+- [ ] Frequently queried fields are indexed
+- [ ] Foreign keys have proper relationship tags
+- [ ] Cascade deletes are configured where needed
+- [ ] TableName() method returns plural snake_case
+- [ ] JSON tags use snake_case naming
+- [ ] Pointer types used for optional relationships
+- [ ] \`omitempty\` added to optional json fields
+
+## Anti-Patterns
+
+❌ **DON'T:**
+- Use \`gorm.Model\` (use \`BaseModel\` instead)
+- Forget to index foreign keys
+- Use value types for optional relationships
+- Mix camelCase and snake_case in json tags
+- Omit \`TableName()\` method
+- Put relationship fields before business fields
+
+✅ **DO:**
+- Always embed \`BaseModel\`
+- Index all foreign keys
+- Use pointer types for optional relationships
+- Use snake_case for all json tags
+- Provide explicit \`TableName()\` method
+- Follow field ordering rules
+

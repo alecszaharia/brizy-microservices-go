@@ -33,7 +33,7 @@ func (s *SymbolService) ListSymbols(ctx context.Context, in *v1.ListSymbolsReque
 	}
 
 	// Call business layer to get symbols and pagination metadata
-	symbols, meta, err := s.uc.ListSymbols(ctx, options)
+	symbols, meta, err := s.uc.ListSymbols(ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID})
 	if err != nil {
 		return nil, toServiceError(err)
 	}
