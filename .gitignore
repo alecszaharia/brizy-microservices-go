@@ -27,14 +27,6 @@ go.work.sum
 *.o
 *.a
 
-# Generated code
-**/wire_gen.go
-**/*.pb.go
-**/*_grpc.pb.go
-**/*_http.pb.go
-**/*.pb.validate.go
-**/openapiv2/
-
 # Buf lock file (generated)
 buf.lock
 
