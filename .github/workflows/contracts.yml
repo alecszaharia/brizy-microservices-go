@@ -1,0 +1,127 @@
+name: Contracts Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GO_VERSION: '1.25'
+
+jobs:
+  changes:
+    name: Detect Contract Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            contracts:
+              - 'api/**/*.proto'
+              - 'buf.yaml'
+              - 'buf.gen.yaml'
+              - 'contracts/**'
+              - '.github/scripts/validate-service-isolation.sh'
+            workflows:
+              - '.github/workflows/contracts.yml'
+
+  validate:
+    name: Validate Contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: |
+      needs.changes.outputs.contracts == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            go.work.sum
+            contracts/go.sum
+
+      - name: Setup buf CLI
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install protoc plugins
+        run: |
+          # Install Kratos HTTP binding generator
+          go install github.com/go-kratos/kratos/cmd/protoc-gen-go-http/v2@latest
+
+          # Install other required protoc plugins
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          go install github.com/bufbuild/connect-go/cmd/protoc-gen-connect-go@latest
+
+      - name: Install buf dependencies
+        run: |
+          # Download buf module dependencies
+          buf dep update
+
+      - name: Lint protobuf files
+        run: make contracts-lint
+
+      - name: Check for breaking changes
+        if: github.event_name == 'pull_request'
+        run: |
+          # Compare against main branch for breaking API changes
+          make contracts-breaking
+
+      - name: Generate contracts
+        run: make contracts-generate
+
+      - name: Validate service isolation
+        run: |
+          # Ensure script is executable
+          chmod +x ./.github/scripts/validate-service-isolation.sh
+
+          # Run validation script
+          # Enforces: services must not import from each other
+          ./.github/scripts/validate-service-isolation.sh
+
+      - name: Verify generated code is committed
+        run: |
+          # Ensure generated code matches proto definitions
+          if ! git diff --exit-code contracts/; then
+            echo "ERROR: Generated contracts are out of sync!"
+            echo "Run 'make contracts-generate' locally and commit the changes."
+            echo ""
+            echo "Changed files:"
+            git diff --stat contracts/
+            echo ""
+            echo "Diff:"
+            git diff contracts/
+            exit 1
+          fi
+          echo "✓ Contract generation verified - all generated code is up to date"

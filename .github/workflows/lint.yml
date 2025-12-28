@@ -1,0 +1,91 @@
+name: Go Linting
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GO_VERSION: '1.25'
+
+jobs:
+  changes:
+    name: Detect Go Code Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      services: ${{ steps.filter.outputs.services }}
+      platform: ${{ steps.filter.outputs.platform }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            services:
+              - 'services/**'
+              - 'go.work'
+              - 'go.work.sum'
+            platform:
+              - 'platform/**'
+            workflows:
+              - '.github/workflows/lint.yml'
+
+  lint:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: |
+      needs.changes.outputs.services == 'true' ||
+      needs.changes.outputs.platform == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.work.sum
+
+      - name: Install golangci-lint
+        run: |
+          # Install latest golangci-lint
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
+
+      - name: Run golangci-lint on platform
+        working-directory: platform
+        run: |
+          golangci-lint run --timeout=5m ./...
+        continue-on-error: false
+
+      - name: Run golangci-lint on services
+        run: |
+          # Lint each service
+          for service_dir in services/*/; do
+            if [ -d "$service_dir" ]; then
+              service=$(basename "$service_dir")
+              echo "Linting service: $service"
+              cd "$service_dir"
+              golangci-lint run --timeout=5m ./... || exit 1
+              cd ../..
+            fi
+          done

@@ -1,0 +1,430 @@
+name: CI Pipeline
+`
+# Trigger on all pushes to main and pull requests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+# Minimal permissions following least privilege principle
+permissions:
+  contents: read
+  pull-requests: read
+
+# Environment variables shared across jobs
+env:
+  GO_VERSION: '1.25'
+
+jobs:
+  # Job 1: Detect what changed to optimize pipeline execution
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Output flags for conditional job execution
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+      services: ${{ steps.filter.outputs.services }}
+      platform: ${{ steps.filter.outputs.platform }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            contracts:
+              - 'api/**/*.proto'
+              - 'buf.yaml'
+              - 'buf.gen.yaml'
+              - 'contracts/**'
+              - '.github/scripts/validate-service-isolation.sh'
+            services:
+              - 'services/**'
+              - 'platform/**'
+              - 'go.work'
+              - 'go.work.sum'
+            platform:
+              - 'platform/**'
+            workflows:
+              - '.github/workflows/**'
+
+  # Job 2: Validate contracts (lint + breaking changes + generation)
+  contracts:
+    name: Validate Contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Run if contracts changed, workflows changed, or on manual trigger
+    needs: changes
+    if: |
+      needs.changes.outputs.contracts == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for breaking change detection
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          # Cache Go modules and build cache automatically
+          cache: true
+          cache-dependency-path: |
+            go.work.sum
+            contracts/go.sum
+
+      - name: Setup buf CLI
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install protoc plugins
+        run: |
+          # Install Kratos HTTP binding generator (required by buf.gen.yaml)
+          go install github.com/go-kratos/kratos/cmd/protoc-gen-go-http/v2@latest
+
+          # Install other required protoc plugins
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          go install github.com/bufbuild/connect-go/cmd/protoc-gen-connect-go@latest
+
+      - name: Install buf dependencies
+        run: |
+          # Download buf module dependencies (googleapis, protoc-gen-validate)
+          buf dep update
+
+      - name: Lint protobuf files
+        run: make contracts-lint
+
+      - name: Check for breaking changes
+        if: github.event_name == 'pull_request'
+        run: |
+          # Compare against main branch for breaking API changes
+          # Uses buf.yaml breaking rules (FILE strategy)
+          make contracts-breaking
+
+      - name: Generate contracts
+        run: make contracts-generate
+
+      - name: Validate service isolation
+        run: |
+          # Ensure script is executable
+          chmod +x ./.github/scripts/validate-service-isolation.sh
+
+          # Run validation script
+          # Enforces: services must not import from each other
+          # Valid imports: contracts, platform, stdlib, external dependencies
+          ./.github/scripts/validate-service-isolation.sh
+
+      - name: Verify generated code is committed
+        run: |
+          # Ensure generated code matches proto definitions
+          if ! git diff --exit-code contracts/; then
+            echo "ERROR: Generated contracts are out of sync!"
+            echo "Run 'make contracts-generate' locally and commit the changes."
+            echo ""
+            echo "Changed files:"
+            git diff --stat contracts/
+            echo ""
+            echo "Diff:"
+            git diff contracts/
+            exit 1
+          fi
+          echo "✓ Contract generation verified - all generated code is up to date"
+
+  # Job 3: Lint Go code across all modules
+  lint-go:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: |
+      needs.changes.outputs.services == 'true' ||
+      needs.changes.outputs.platform == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: go.work.sum
+
+      - name: Install golangci-lint
+        run: |
+          # Install latest golangci-lint
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
+
+      - name: Run golangci-lint on platform
+        working-directory: platform
+        run: |
+          golangci-lint run --timeout=5m ./...
+        continue-on-error: false
+
+      - name: Run golangci-lint on services
+        run: |
+          # Lint each service
+          for service_dir in services/*/; do
+            if [ -d "$service_dir" ]; then
+              service=$(basename "$service_dir")
+              echo "Linting service: $service"
+              cd "$service_dir"
+              golangci-lint run --timeout=5m ./... || exit 1
+              cd ../..
+            fi
+          done
+
+  # Job 4: Test services in parallel using matrix strategy
+  test-services:
+    name: Test ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [changes, contracts, lint-go]
+    # Run if services/platform changed, or always run contracts/lint-go if they ran
+    if: |
+      always() &&
+      (needs.contracts.result == 'success' || needs.contracts.result == 'skipped') &&
+      (needs.lint-go.result == 'success' || needs.lint-go.result == 'skipped') &&
+      (needs.changes.outputs.services == 'true' ||
+       needs.changes.outputs.platform == 'true' ||
+       needs.changes.outputs.workflows == 'true' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.event_name == 'push')
+
+    strategy:
+      # Don't cancel other matrix jobs if one fails
+      fail-fast: false
+      matrix:
+        # Test all services in parallel
+        service: [symbols, test]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            go.work.sum
+            services/${{ matrix.service }}/go.sum
+            platform/go.sum
+            contracts/go.sum
+
+      # Cache go build artifacts for faster subsequent runs
+      - name: Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-build-${{ matrix.service }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-build-${{ matrix.service }}-
+            ${{ runner.os }}-go-build-
+
+      - name: Download Go modules
+        working-directory: services/${{ matrix.service }}
+        run: |
+          # Download dependencies for workspace
+          go mod download
+
+      - name: Run tests with race detection
+        working-directory: services/${{ matrix.service }}
+        run: |
+          # Run unit tests with race detector and coverage
+          make test
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.service }}
+          path: services/${{ matrix.service }}/coverage.out
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Display coverage summary
+        working-directory: services/${{ matrix.service }}
+        run: |
+          # Show coverage percentage in logs
+          echo "Coverage for ${{ matrix.service }}:"
+          go tool cover -func=coverage.out | tail -n 1
+
+  # Job 5: Build services to verify compilation
+  build-services:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Build after successful tests
+    needs: [changes, test-services]
+    if: |
+      always() &&
+      needs.test-services.result == 'success' &&
+      (needs.changes.outputs.services == 'true' ||
+       needs.changes.outputs.platform == 'true' ||
+       needs.changes.outputs.workflows == 'true' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.event_name == 'push')
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [symbols, test]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            go.work.sum
+            services/${{ matrix.service }}/go.sum
+
+      - name: Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-build-${{ matrix.service }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-build-${{ matrix.service }}-
+            ${{ runner.os }}-go-build-
+
+      - name: Build service binary
+        working-directory: services/${{ matrix.service }}
+        run: |
+          # Build the service binary
+          make build
+
+      - name: Verify binary exists
+        working-directory: services/${{ matrix.service }}
+        run: |
+          # Check that the binary was created
+          if [ ! -f "bin/${{ matrix.service }}" ]; then
+            echo "ERROR: Binary not found at bin/${{ matrix.service }}"
+            exit 1
+          fi
+
+          # Display binary info
+          ls -lh bin/${{ matrix.service }}
+          file bin/${{ matrix.service }}
+
+          echo "✓ Service binary built successfully"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.service }}
+          path: services/${{ matrix.service }}/bin/${{ matrix.service }}
+          retention-days: 7
+
+  # Job 6: Aggregate results and report status
+  ci-complete:
+    name: CI Complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Run after all other jobs complete
+    needs: [changes, contracts, lint-go, test-services, build-services]
+    # Always run this job to report final status
+    if: always()
+
+    steps:
+      - name: Check job results
+        run: |
+          echo "Checking CI pipeline results..."
+          echo ""
+
+          # Check contracts job (might be skipped if no changes)
+          if [[ "${{ needs.contracts.result }}" == "success" ]]; then
+            echo "✓ Contracts validated successfully"
+          elif [[ "${{ needs.contracts.result }}" == "skipped" ]]; then
+            echo "⊘ Contracts validation skipped (no changes)"
+          else
+            echo "❌ Contract validation failed"
+            exit 1
+          fi
+
+          # Check Go linting (might be skipped if no changes)
+          if [[ "${{ needs.lint-go.result }}" == "success" ]]; then
+            echo "✓ Go code linting passed"
+          elif [[ "${{ needs.lint-go.result }}" == "skipped" ]]; then
+            echo "⊘ Go linting skipped (no changes)"
+          else
+            echo "❌ Go linting failed"
+            exit 1
+          fi
+
+          # Check tests (might be skipped if no changes)
+          if [[ "${{ needs.test-services.result }}" == "success" ]]; then
+            echo "✓ All service tests passed"
+          elif [[ "${{ needs.test-services.result }}" == "skipped" ]]; then
+            echo "⊘ Service tests skipped (no changes)"
+          else
+            echo "❌ Service tests failed"
+            exit 1
+          fi
+
+          # Check builds (might be skipped if no changes)
+          if [[ "${{ needs.build-services.result }}" == "success" ]]; then
+            echo "✓ All service builds succeeded"
+          elif [[ "${{ needs.build-services.result }}" == "skipped" ]]; then
+            echo "⊘ Service builds skipped (no changes)"
+          else
+            echo "❌ Service builds failed"
+            exit 1
+          fi
+
+          echo ""
+          echo "================================================================"
+          echo "✓ CI Pipeline completed successfully!"
+          echo "================================================================"
+
+      - name: Download all coverage reports
+        uses: actions/download-artifact@v4
+        if: needs.test-services.result == 'success'
+        with:
+          pattern: coverage-*
+          path: coverage-reports
+
+      - name: Display coverage summary
+        if: needs.test-services.result == 'success'
+        run: |
+          echo ""
+          echo "Coverage Summary"
+          echo "================"
+          for report in coverage-reports/coverage-*/coverage.out; do
+            if [ -f "$report" ]; then
+              service=$(basename $(dirname "$report") | sed 's/coverage-//')
+              echo ""
+              echo "Service: $service"
+              echo "Coverage report available as artifact: coverage-$service"
+            fi
+          done
+          echo ""
