@@ -5,5 +5,4 @@ use (
 	./contracts
 	./platform
 	./services/symbols
-	./services/test
 )
