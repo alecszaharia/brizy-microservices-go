@@ -83,7 +83,7 @@ func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint3
 	query := r.db.WithContext(ctx).Model(&model.Symbol{})
 
 	// Apply filters if provided (both count and find queries will use this)
-	if filter != nil && len(filter) > 0 {
+	if len(filter) > 0 {
 		query = query.Where(filter)
 	}
 
