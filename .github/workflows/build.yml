@@ -16,49 +16,34 @@ env:
   GO_VERSION: '1.25'
 
 jobs:
-  changes:
-    name: Detect Service Changes
+  detect-services:
+    name: Detect Services
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      services: ${{ steps.filter.outputs.services }}
-      platform: ${{ steps.filter.outputs.platform }}
-      workflows: ${{ steps.filter.outputs.workflows }}
+      services: ${{ steps.set-services.outputs.services }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check changed files
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            services:
-              - 'services/**'
-              - 'go.work'
-              - 'go.work.sum'
-            platform:
-              - 'platform/**'
-            workflows:
-              - '.github/workflows/build.yml'
+      - name: Detect service directories
+        id: set-services
+        run: |
+          # Find all service directories
+          services=$(ls -d services/*/ 2>/dev/null | xargs -n 1 basename | jq -R -s -c 'split("\n")[:-1]')
+          echo "services=$services" >> $GITHUB_OUTPUT
+          echo "Detected services: $services"
 
   build:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: changes
-    if: |
-      needs.changes.outputs.services == 'true' ||
-      needs.changes.outputs.platform == 'true' ||
-      needs.changes.outputs.workflows == 'true' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push'
-
+    needs: [detect-services]
     strategy:
       fail-fast: false
       matrix:
-        service: [symbols, test]
+        service: ${{ fromJSON(needs.detect-services.outputs.services) }}
 
     steps:
       - name: Checkout repository
