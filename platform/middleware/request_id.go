@@ -11,6 +11,8 @@ import (
 
 // Context key type to avoid collisions
 
+type requestIDKey struct{}
+
 func RequestIDMiddleware() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
@@ -26,7 +28,7 @@ func RequestIDMiddleware() middleware.Middleware {
 			}
 
 			// Add to context
-			ctx = context.WithValue(ctx, "request-id", requestID)
+			ctx = context.WithValue(ctx, requestIDKey{}, requestID)
 
 			// Add to Kratos log context
 			// Add to response header if transport available
@@ -43,7 +45,7 @@ func RequestIDMiddleware() middleware.Middleware {
 // This is used with log.With() to automatically include request ID in all logs.
 func RequestID() log.Valuer {
 	return func(ctx context.Context) interface{} {
-		if rid, ok := ctx.Value("request-id").(string); ok {
+		if rid, ok := ctx.Value(requestIDKey{}).(string); ok {
 			return rid
 		}
 		return ""

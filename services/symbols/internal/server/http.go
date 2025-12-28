@@ -6,11 +6,11 @@ import (
 	"symbols/internal/conf"
 	"symbols/internal/service"
 
+	"github.com/go-kratos/kratos/contrib/middleware/validate/v2"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware/logging"
 	"github.com/go-kratos/kratos/v2/middleware/ratelimit"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
-	"github.com/go-kratos/kratos/v2/middleware/validate"
 	"github.com/go-kratos/kratos/v2/transport/http"
 	"github.com/gorilla/handlers"
 )
@@ -22,7 +22,7 @@ func NewHTTPServer(c *conf.Server, symbolService *service.SymbolService, logger 
 			ratelimit.Server(),
 			middleware.RequestIDMiddleware(),
 			logging.Server(logger),
-			validate.Validator(),
+			validate.ProtoValidate(),
 		),
 	}
 

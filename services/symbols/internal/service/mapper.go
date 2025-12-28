@@ -70,7 +70,7 @@ func NewListSymbolsOptions(in *v1.ListSymbolsRequest) (*biz.ListSymbolsOptions, 
 	options := &biz.ListSymbolsOptions{
 		ProjectID: in.ProjectId,
 		Pagination: pagination.OffsetPaginationParams{
-			Offset: uint64(offset),
+			Offset: offset,
 			Limit:  limit,
 		},
 	}
@@ -161,7 +161,7 @@ func toServiceError(err error) *errors.Error {
 		// Unknown error - return as internal server error
 		return errors.InternalServer(
 			v1.ErrorReason_SYMBOL_UNSPECIFIED.String(),
-			fmt.Sprintf("internal server error"),
+			"internal server error",
 		).WithCause(err)
 	}
 

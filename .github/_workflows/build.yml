@@ -1,0 +1,98 @@
+name: Service Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  GO_VERSION: '1.25'
+
+jobs:
+  detect-services:
+    name: Detect Services
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      services: ${{ steps.set-services.outputs.services }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect service directories
+        id: set-services
+        run: |
+          # Find all service directories
+          services=$(ls -d services/*/ 2>/dev/null | xargs -n 1 basename | jq -R -s -c 'split("\n")[:-1]')
+          echo "services=$services" >> $GITHUB_OUTPUT
+          echo "Detected services: $services"
+
+  build:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [detect-services]
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.detect-services.outputs.services) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            go.work.sum
+            services/${{ matrix.service }}/go.sum
+
+      - name: Cache Go build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-build-${{ matrix.service }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-build-${{ matrix.service }}-
+            ${{ runner.os }}-go-build-
+
+      - name: Build service binary
+        working-directory: services/${{ matrix.service }}
+        run: |
+          # Build the service binary
+          make build
+
+      - name: Verify binary exists
+        working-directory: services/${{ matrix.service }}
+        run: |
+          # Check that the binary was created
+          if [ ! -f "bin/${{ matrix.service }}" ]; then
+            echo "ERROR: Binary not found at bin/${{ matrix.service }}"
+            exit 1
+          fi
+
+          # Display binary info
+          ls -lh bin/${{ matrix.service }}
+          file bin/${{ matrix.service }}
+
+          echo "✓ Service binary built successfully"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.service }}
+          path: services/${{ matrix.service }}/bin/${{ matrix.service }}
+          retention-days: 7
