@@ -1,4 +1,4 @@
-name: Validate Contracts
+name: Validate Contracts and Service Isolation
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   validate:
-    name: Validate Contract Generation
+    name: Validate Contracts and Service Isolation
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -61,6 +61,16 @@ jobs:
 
       - name: Generate contracts
         run: make contracts-generate
+
+      - name: Validate service isolation
+        run: |
+          # Ensure script is executable
+          chmod +x ./.github/scripts/validate-service-isolation.sh
+
+          # Run validation script
+          # Enforces: services must not import from each other
+          # Valid imports: contracts, platform, stdlib, external dependencies
+          ./.github/scripts/validate-service-isolation.sh
 
       - name: Check for uncommitted changes
         run: |

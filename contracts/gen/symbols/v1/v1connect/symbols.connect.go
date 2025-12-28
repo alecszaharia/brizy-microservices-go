@@ -6,8 +6,8 @@ package v1connect
 
 import (
 	connect "connectrpc.com/connect"
-	v1 "contacts/gen/symbols/v1"
 	context "context"
+	v1 "contracts/gen/symbols/v1"
 	errors "errors"
 	http "net/http"
 	strings "strings"
