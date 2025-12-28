@@ -22,7 +22,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       contracts: ${{ steps.filter.outputs.contracts }}
-      workflows: ${{ steps.filter.outputs.workflows }}
 
     steps:
       - name: Checkout repository
@@ -39,8 +38,6 @@ jobs:
               - 'buf.gen.yaml'
               - 'contracts/**'
               - '.github/scripts/validate-service-isolation.sh'
-            workflows:
-              - '.github/workflows/contracts.yml'
 
   validate:
     name: Validate Contracts
@@ -48,10 +45,7 @@ jobs:
     timeout-minutes: 10
     needs: changes
     if: |
-      needs.changes.outputs.contracts == 'true' ||
-      needs.changes.outputs.workflows == 'true' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push'
+      needs.changes.outputs.contracts == 'true'
 
     steps:
       - name: Checkout repository
