@@ -28,7 +28,6 @@ type CORS struct {
 	AllowedMethods   []string               `protobuf:"bytes,2,rep,name=allowed_methods,json=allowedMethods,proto3" json:"allowed_methods,omitempty"`        // List of allowed HTTP methods (e.g., ["GET", "POST", "PUT", "DELETE"])
 	AllowedHeaders   []string               `protobuf:"bytes,3,rep,name=allowed_headers,json=allowedHeaders,proto3" json:"allowed_headers,omitempty"`        // List of allowed request headers (e.g., ["Content-Type", "Authorization"])
 	ExposedHeaders   []string               `protobuf:"bytes,4,rep,name=exposed_headers,json=exposedHeaders,proto3" json:"exposed_headers,omitempty"`        // List of headers to expose to the browser
-	ExposedHeaders2  []string               `protobuf:"bytes,7,rep,name=exposed_headers2,json=exposedHeaders2,proto3" json:"exposed_headers2,omitempty"`     // List of headers to expose to the browser
 	AllowCredentials bool                   `protobuf:"varint,5,opt,name=allow_credentials,json=allowCredentials,proto3" json:"allow_credentials,omitempty"` // Whether to allow credentials (cookies, authorization headers)
 	MaxAge           *durationpb.Duration   `protobuf:"bytes,6,opt,name=max_age,json=maxAge,proto3" json:"max_age,omitempty"`                                // How long browsers should cache preflight results
 	unknownFields    protoimpl.UnknownFields
@@ -89,13 +88,6 @@ func (x *CORS) GetAllowedHeaders() []string {
 func (x *CORS) GetExposedHeaders() []string {
 	if x != nil {
 		return x.ExposedHeaders
-	}
-	return nil
-}
-
-func (x *CORS) GetExposedHeaders2() []string {
-	if x != nil {
-		return x.ExposedHeaders2
 	}
 	return nil
 }
@@ -330,13 +322,12 @@ var File_conf_v1_servers_proto protoreflect.FileDescriptor
 
 const file_conf_v1_servers_proto_rawDesc = "" +
 	"\n" +
-	"\x15conf/v1/servers.proto\x12\aconf.v1\x1a\x1egoogle/protobuf/duration.proto\"\xb6\x02\n" +
+	"\x15conf/v1/servers.proto\x12\aconf.v1\x1a\x1egoogle/protobuf/duration.proto\"\x8b\x02\n" +
 	"\x04CORS\x12'\n" +
 	"\x0fallowed_origins\x18\x01 \x03(\tR\x0eallowedOrigins\x12'\n" +
 	"\x0fallowed_methods\x18\x02 \x03(\tR\x0eallowedMethods\x12'\n" +
 	"\x0fallowed_headers\x18\x03 \x03(\tR\x0eallowedHeaders\x12'\n" +
-	"\x0fexposed_headers\x18\x04 \x03(\tR\x0eexposedHeaders\x12)\n" +
-	"\x10exposed_headers2\x18\a \x03(\tR\x0fexposedHeaders2\x12+\n" +
+	"\x0fexposed_headers\x18\x04 \x03(\tR\x0eexposedHeaders\x12+\n" +
 	"\x11allow_credentials\x18\x05 \x01(\bR\x10allowCredentials\x122\n" +
 	"\amax_age\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\x06maxAge\"\x92\x01\n" +
 	"\n" +
@@ -356,8 +347,8 @@ const file_conf_v1_servers_proto_rawDesc = "" +
 	"\x0erun_migrations\x18\x03 \x01(\bR\rrunMigrations\x12$\n" +
 	"\x0emax_idle_conns\x18\x04 \x01(\x11R\fmaxIdleConns\x12$\n" +
 	"\x0emax_open_conns\x18\x05 \x01(\x11R\fmaxOpenConns\x12E\n" +
-	"\x11conn_max_lifetime\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\x0fconnMaxLifetimeBq\n" +
-	"\vcom.conf.v1B\fServersProtoP\x01Z\x17contacts/gen/conf/v1;v1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
+	"\x11conn_max_lifetime\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\x0fconnMaxLifetimeBr\n" +
+	"\vcom.conf.v1B\fServersProtoP\x01Z\x18contracts/gen/conf/v1;v1\xa2\x02\x03CXX\xaa\x02\aConf.V1\xca\x02\aConf\\V1\xe2\x02\x13Conf\\V1\\GPBMetadata\xea\x02\bConf::V1b\x06proto3"
 
 var (
 	file_conf_v1_servers_proto_rawDescOnce sync.Once

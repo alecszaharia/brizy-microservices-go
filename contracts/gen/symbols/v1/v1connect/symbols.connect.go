@@ -5,12 +5,13 @@
 package v1connect
 
 import (
-	connect "connectrpc.com/connect"
-	v1 "contacts/gen/symbols/v1"
 	context "context"
+	v1 "contracts/gen/symbols/v1"
 	errors "errors"
 	http "net/http"
 	strings "strings"
+
+	connect "connectrpc.com/connect"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are

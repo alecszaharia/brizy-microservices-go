@@ -62,6 +62,16 @@ jobs:
       - name: Generate contracts
         run: make contracts-generate
 
+      - name: Validate service isolation
+        run: |
+          # Ensure script is executable
+          chmod +x ./.github/scripts/validate-service-isolation.sh
+
+          # Run validation script
+          # Enforces: services must not import from each other
+          # Valid imports: contracts, platform, stdlib, external dependencies
+          ./.github/scripts/validate-service-isolation.sh
+
       - name: Check for uncommitted changes
         run: |
           # Check if contract generation produced any changes

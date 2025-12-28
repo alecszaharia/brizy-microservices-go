@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package symbols.v1;
 
-option go_package = "contacts/gen/symbols/v1;v1";
+option go_package = "contracts/gen/symbols/v1;v1";
 
 enum ErrorReason {
   SYMBOL_UNSPECIFIED = 0;

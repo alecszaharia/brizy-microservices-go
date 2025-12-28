@@ -4,14 +4,13 @@ package conf.v1;
 
 import "google/protobuf/duration.proto";
 
-option go_package = "contacts/gen/conf/v1;v1";
+option go_package = "contracts/gen/conf/v1;v1";
 
 message CORS {
   repeated string allowed_origins = 1; // List of allowed origins (e.g., ["http://localhost:3000", "https://example.com"])
   repeated string allowed_methods = 2; // List of allowed HTTP methods (e.g., ["GET", "POST", "PUT", "DELETE"])
   repeated string allowed_headers = 3; // List of allowed request headers (e.g., ["Content-Type", "Authorization"])
   repeated string exposed_headers = 4; // List of headers to expose to the browser
-  repeated string exposed_headers2 = 7; // List of headers to expose to the browser
   bool allow_credentials = 5; // Whether to allow credentials (cookies, authorization headers)
   google.protobuf.Duration max_age = 6; // How long browsers should cache preflight results
 }
