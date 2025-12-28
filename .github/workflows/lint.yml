@@ -70,6 +70,9 @@ jobs:
         run: |
           # Install latest golangci-lint
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        with:
+          cache: true
+          cache-dependency-path: go.work.sum
 
       - name: Run golangci-lint on platform
         working-directory: platform

@@ -93,7 +93,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			},
 			setupRequest: "test-request",
 			checkContext: func(t *testing.T, ctx context.Context) {
-				requestID := ctx.Value("request-id")
+				requestID := ctx.Value(requestIDKey{})
 				assert.NotNil(t, requestID)
 				assert.IsType(t, "", requestID)
 
@@ -126,7 +126,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			},
 			setupRequest: "test-request",
 			checkContext: func(t *testing.T, ctx context.Context) {
-				requestID := ctx.Value("request-id")
+				requestID := ctx.Value(requestIDKey{})
 				assert.NotNil(t, requestID)
 				assert.Equal(t, "custom-request-id-12345", requestID)
 			},
@@ -147,7 +147,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			},
 			setupRequest: "test-request",
 			checkContext: func(t *testing.T, ctx context.Context) {
-				requestID := ctx.Value("request-id")
+				requestID := ctx.Value(requestIDKey{})
 				assert.NotNil(t, requestID)
 
 				ridStr, ok := requestID.(string)
@@ -174,7 +174,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			},
 			setupRequest: "test-request",
 			checkContext: func(t *testing.T, ctx context.Context) {
-				requestID := ctx.Value("request-id")
+				requestID := ctx.Value(requestIDKey{})
 				assert.NotNil(t, requestID)
 
 				ridStr, ok := requestID.(string)
@@ -254,7 +254,7 @@ func TestRequestIDMiddleware_HandlerChainPropagation(t *testing.T) {
 	firstMiddleware := func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
 			firstMiddlewareCalled = true
-			if rid, ok := ctx.Value("request-id").(string); ok {
+			if rid, ok := ctx.Value(requestIDKey{}).(string); ok {
 				requestIDInFirstMiddleware = rid
 			}
 			return handler(ctx, req)
@@ -264,7 +264,7 @@ func TestRequestIDMiddleware_HandlerChainPropagation(t *testing.T) {
 	secondMiddleware := func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
 			secondMiddlewareCalled = true
-			if rid, ok := ctx.Value("request-id").(string); ok {
+			if rid, ok := ctx.Value(requestIDKey{}).(string); ok {
 				requestIDInSecondMiddleware = rid
 			}
 			return handler(ctx, req)
@@ -273,7 +273,7 @@ func TestRequestIDMiddleware_HandlerChainPropagation(t *testing.T) {
 
 	finalHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		handlerCalled = true
-		if rid, ok := ctx.Value("request-id").(string); ok {
+		if rid, ok := ctx.Value(requestIDKey{}).(string); ok {
 			requestIDInHandler = rid
 		}
 		return "success", nil
@@ -339,7 +339,7 @@ func TestRequestID_Valuer(t *testing.T) {
 		{
 			name: "extracts request ID from context (any format)",
 			setupContext: func() context.Context {
-				return context.WithValue(context.Background(), "request-id", "custom-id-format-123")
+				return context.WithValue(context.Background(), requestIDKey{}, "custom-id-format-123")
 			},
 			expectedResult: "custom-id-format-123",
 		},
@@ -353,7 +353,7 @@ func TestRequestID_Valuer(t *testing.T) {
 		{
 			name: "returns empty string when type assertion fails",
 			setupContext: func() context.Context {
-				return context.WithValue(context.Background(), "request-id", 12345) // wrong type
+				return context.WithValue(context.Background(), requestIDKey{}, 12345) // wrong type
 			},
 			expectedResult: "",
 		},
@@ -379,7 +379,7 @@ func TestRequestIDMiddleware_ConcurrentRequests(t *testing.T) {
 	done := make(chan bool, numRequests)
 
 	mockHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		if rid, ok := ctx.Value("request-id").(string); ok {
+		if rid, ok := ctx.Value(requestIDKey{}).(string); ok {
 			requestIDs <- rid
 		}
 		done <- true
@@ -444,7 +444,7 @@ func TestRequestIDMiddleware_ContextPropagation(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify request ID was added
-	requestID := capturedContext.Value("request-id")
+	requestID := capturedContext.Value(requestIDKey{})
 	assert.NotNil(t, requestID)
 
 	// Verify other context values are preserved
@@ -493,7 +493,7 @@ func BenchmarkRequestIDMiddleware_GenerateUUID(b *testing.B) {
 }
 
 func BenchmarkRequestID_Valuer(b *testing.B) {
-	ctx := context.WithValue(context.Background(), "request-id", "550e8400-e29b-41d4-a716-446655440000")
+	ctx := context.WithValue(context.Background(), requestIDKey{}, "550e8400-e29b-41d4-a716-446655440000")
 	valuer := RequestID()
 
 	b.ResetTimer()
