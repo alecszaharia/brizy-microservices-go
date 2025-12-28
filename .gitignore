@@ -72,3 +72,4 @@ review-*
 
 # Claude Code session data (optional - remove if you want to commit)
 .claude/settings.local.json
+/.claude/plans/steady-tickling-alpaca-agent-a691a3a.md
