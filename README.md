@@ -52,6 +52,9 @@ This installs:
 Always commit the generated code in contracts. Failing to commit the generated code will cause the CI to fail.
 
 ```bash
+# Install protoc plugins and other dependencies
+make init
+
 # Generate gRPC, Connect RPC, and OpenAPI code from protos
 make contracts-generate
 
@@ -63,7 +66,7 @@ make contracts-all
 
 ```bash
 # Build symbol service
-cd services/symbols
+cd services/{service-name}}
 make build
 
 # Run with Docker Compose
