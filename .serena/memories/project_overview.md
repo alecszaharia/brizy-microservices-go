@@ -1,7 +1,8 @@
 # Project Overview
 
 ## Purpose
-This is a **Brizy microservices monorepo** built with Go. The project provides cloud-native microservices for managing Brizy platform entities (currently includes a symbol-service for symbol management).
+This is a **Brizy microservices monorepo** built with Go. The project provides cloud-native microservices for managing Brizy platform entities. Currently includes:
+- **symbols** - Symbol management service
 
 ## Tech Stack
 
@@ -22,11 +23,21 @@ This is a **Brizy microservices monorepo** built with Go. The project provides c
 - **protoc-gen-openapi**: OpenAPI specification generation
 - **protoc-gen-validate**: Proto validation rules
 - **wire**: Dependency injection code generation
+- **kratos**: Kratos framework CLI
 
 ## Key Features
 - Clean Architecture with clear layer separation (service → biz → data)
-- Dual transport support (gRPC and HTTP/JSON)
+- Dual transport support (gRPC and HTTP/JSON via annotations)
 - Connect RPC for browser-friendly gRPC
 - Automatic API generation from protobuf definitions
-- Offset-based pagination utilities
-- Request ID middleware with context propagation
+- Offset-based pagination utilities (platform module)
+- Request ID middleware with context propagation (platform module)
+- Comprehensive validation at transport and business layers
+
+## Platform Module
+Shared utilities across all services:
+- **middleware/** - Request ID middleware with context propagation
+- **pagination/** - Offset-based pagination utilities
+- **adapters/** - Common transformers and adapters
+
+Platform code is imported by services as `brizy-go-platform/{package}`.

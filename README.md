@@ -28,10 +28,9 @@ Services follow **Clean Architecture** with layers: `service` → `biz` → `dat
 
 - **buf** - Protocol buffer management ([installation](https://buf.build/docs/installation/))
 
-The following protoc plugins are required for service development and can be installed via `make init` in any service directory:
+The following protoc plugins are required for service development and can be installed via `make init`:
 
 ```bash
-cd services/symbols
 make init
 ```
 
