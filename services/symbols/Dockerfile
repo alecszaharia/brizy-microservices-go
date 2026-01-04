@@ -2,13 +2,15 @@ FROM golang:1.25 AS builder
 
 ARG TARGETARCH
 ARG TARGETOS
-ARG VERSION=dev
+ARG VERSION
 
 COPY ../../ /src
+
 WORKDIR /src/services/symbols
 
 RUN mkdir -p bin/
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./...
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/symbols ./cmd/symbols
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/symbols-worker ./cmd/symbols-worker
 
 FROM debian:stable-slim
 
@@ -24,6 +26,9 @@ WORKDIR /app
 
 EXPOSE 8000
 EXPOSE 7000
+
 VOLUME /data/conf
 
-CMD [ "./symbol-service", "--conf", "/data/conf/config.yaml" ]
+RUN chmod +x ./*
+
+CMD [ "./symbols", "--conf", "/data/conf/config.yaml" ]

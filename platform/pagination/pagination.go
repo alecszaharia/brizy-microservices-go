@@ -6,7 +6,7 @@ type OffsetPaginationParams struct {
 	Limit  uint32 `validate:"gte=1,lte=100"`
 }
 
-// PaginationMeta contains metadata about paginated results
+// Meta PaginationMeta contains metadata about paginated results
 type Meta struct {
 	TotalCount      uint64
 	Offset          uint64

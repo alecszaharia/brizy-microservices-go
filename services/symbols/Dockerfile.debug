@@ -4,6 +4,7 @@ RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 ARG TARGETARCH
 ARG TARGETOS
+ARG VERSION=dev
 
 COPY ../../ /src
 WORKDIR /src/services/symbols
@@ -13,8 +14,14 @@ RUN mkdir -p bin/
 # Build with debugging optimizations disabled
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
     -gcflags="all=-N -l" \
-    -ldflags "-X main.Version=dev" \
-    -o ./bin/ ./...
+    -ldflags "-X main.Version=$(VERSION)" \
+    -o ./bin/symbols ./cmd/symbols
+
+# Build with debugging optimizations disabled
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
+    -gcflags="all=-N -l" \
+    -ldflags "-X main.Version=$(VERSION)" \
+    -o ./bin/symbols-worker ./cmd/symbols-worker
 
 FROM debian:stable-slim
 
@@ -30,5 +37,7 @@ COPY --from=builder /go/bin/dlv /
 COPY --from=builder /src/services/symbols/bin /app
 COPY --from=builder /src/services/symbols/configs/config.yaml /data/conf/config.yaml
 
+RUN chmod +x /app/*
+
 WORKDIR /
-CMD ["/dlv", "--listen=:2345", "--headless=true", "--api-version=2", "--check-go-version=false", "--accept-multiclient", "exec", "/app/symbol-service", "--", "--conf", "/data/conf/config.yaml"]
+CMD ["/dlv", "--listen=:2345", "--headless=true", "--api-version=2", "--check-go-version=false", "--accept-multiclient", "exec", "/app/symbols", "--", "--conf", "/data/conf/config.yaml"]

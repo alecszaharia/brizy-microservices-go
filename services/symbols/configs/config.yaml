@@ -1,7 +1,8 @@
 server:
   http:
     addr: 0.0.0.0:8000
-    timeout: 1s
+    network: tcp
+    timeout: 30s
     cors:
       allowed_origins:
         - "*"
@@ -23,8 +24,9 @@ server:
       max_age: 3600s  # 1 hour
 
   grpc:
+    network: tcp
     addr: 0.0.0.0:7000
-    timeout: 1s
+    timeout: 30s
 data:
   database:
     # to make interpolation work properly, you should have KRATOS_{NAME} declared
@@ -34,3 +36,20 @@ data:
     max_idle_conns: ${DB_MAX_IDLE_CONNS:10}
     max_open_conns: ${DB_MAX_OPEN_CONNS:100}
     conn_max_lifetime: ${DB_CONN_MAX_LIFETIME:14400s}
+
+  mq:
+    addr: ${MQ_ADDR:amqp://guest:guest@rabbitmq:5672/}
+    dial_timeout: ${MQ_DIAL_TIMEOUT:30s}
+    exchange:
+      name: ${MQ_EXCHANGE_NAME:symbols.events}
+      type: ${MQ_EXCHANGE_TYPE:topic}
+      durable: false
+      auto_delete: false
+    queue:
+      name: ${MQ_QUEUE_NAME:symbols.updates}
+      durable: true
+      auto_delete: false
+      exclusive: false
+      binding_key: ${MQ_QUEUE_BINDING_KEY:symbol.#}
+      prefetch_count: ${MQ_QUEUE_PREFETCH_COUNT:10}
+      worker_count: ${MQ_QUEUE_WORKER_COUNT:5}

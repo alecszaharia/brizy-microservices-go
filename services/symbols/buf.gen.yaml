@@ -5,7 +5,11 @@ plugins:
   # Generate Go protobuf code for service configuration schema
   # Used to define strongly-typed config loaded from YAML at runtime
   - remote: buf.build/protocolbuffers/go
-    out: internal/conf
+    out: internal/conf/gen
     opt: paths=source_relative
+  # Generate validation code from protoc-gen-validate annotations
+  - local: protoc-gen-validate
+    out: internal/conf/gen
+    opt: paths=source_relative,lang=go
 inputs:
   - directory: internal/conf

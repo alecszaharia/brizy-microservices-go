@@ -69,7 +69,10 @@ make contracts-format
 make contracts-all
 ```
 
-**Note**: Proto definitions are in `api/{service}/v1/*.proto`. Generated code goes to `contracts/{service}/v1/`.
+**Note**: Proto definitions are organized as:
+- Service-specific: `api/service/{service}/v1/*.proto`
+
+Generated code goes to `contracts/gen/` with the same directory structure.
 
 ### Service Development (services/{service-name}/)
 

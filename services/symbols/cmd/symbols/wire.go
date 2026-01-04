@@ -5,9 +5,11 @@
 
 package main
 
+//go:generate go run github.com/google/wire/cmd/wire
+
 import (
 	"symbols/internal/biz"
-	"symbols/internal/conf"
+	"symbols/internal/conf/gen"
 	"symbols/internal/data"
 	"symbols/internal/server"
 	"symbols/internal/service"

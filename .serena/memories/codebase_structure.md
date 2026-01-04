@@ -79,7 +79,7 @@ services/{service-name}/
 
 **Service → Biz → Data**
 
-- Service layer depends on business layer (use cases)
+- The service layer depends on the business layer (use cases)
 - Business layer defines repository interfaces
 - Data layer implements repository interfaces
 - Wire handles dependency injection across all layers

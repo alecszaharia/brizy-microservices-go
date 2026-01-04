@@ -5,8 +5,10 @@ syntax = "proto3";
 package symbols.api.conf;
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+import "validate/validate.proto";
 
-option go_package = "symbols/internal/conf;conf";
+option go_package = "symbols/internal/conf;conf"; // ???? is this correct..
 
 message Bootstrap {
   Server server = 1;
@@ -14,37 +16,122 @@ message Bootstrap {
 }
 
 message Server {
-  message HTTP {
-    message CORS {
-      repeated string allowed_origins = 1; // List of allowed origins (e.g., ["http://localhost:3000", "https://example.com"])
-      repeated string allowed_methods = 2; // List of allowed HTTP methods (e.g., ["GET", "POST", "PUT", "DELETE"])
-      repeated string allowed_headers = 3; // List of allowed request headers (e.g., ["Content-Type", "Authorization"])
-      repeated string exposed_headers = 4; // List of headers to expose to the browser
-      bool allow_credentials = 5; // Whether to allow credentials (cookies, authorization headers)
-      google.protobuf.Duration max_age = 6; // How long browsers should cache preflight results
-    }
-    string network = 1;
-    string addr = 2;
-    google.protobuf.Duration timeout = 3;
-    CORS cors = 4;
-  }
-  message GRPC {
-    string network = 1;
-    string addr = 2;
-    google.protobuf.Duration timeout = 3;
-  }
-  HTTP http = 1;
-  GRPC grpc = 2;
+  HTTPServer http = 1;
+  GRPCServer grpc = 2;
 }
 
 message Data {
-  message Database {
-    string driver = 1;
-    string source = 2;
-    bool run_migrations = 3;
-    sint32 max_idle_conns = 4;
-    sint32 max_open_conns = 5;
-    google.protobuf.Duration conn_max_lifetime = 6;
-  }
   Database database = 1;
+  RabbitMQServer mq = 2;
+}
+
+message CORS {
+  repeated string allowed_origins = 1 [(validate.rules).repeated = {
+    min_items: 1
+    items: {
+      string: {min_len: 1}
+    }
+  }]; // List of allowed origins (e.g., ["http://localhost:3000", "https://example.com"])
+  repeated string allowed_methods = 2 [(validate.rules).repeated = {
+    min_items: 1
+    items: {
+      string: {min_len: 1}
+    }
+  }]; // List of allowed HTTP methods (e.g., ["GET", "POST", "PUT", "DELETE"])
+  repeated string allowed_headers = 3 [(validate.rules).repeated = {
+    items: {
+      string: {min_len: 1}
+    }
+  }]; // List of allowed request headers (e.g., ["Content-Type", "Authorization"])
+  repeated string exposed_headers = 4 [(validate.rules).repeated = {
+    items: {
+      string: {min_len: 1}
+    }
+  }]; // List of headers to expose to the browser
+  google.protobuf.BoolValue allow_credentials = 5; // Whether to allow credentials (cookies, authorization headers)
+  google.protobuf.Duration max_age = 6 [(validate.rules).duration = {
+    gt: {}
+  }]; // How long browsers should cache preflight results
+}
+
+message HTTPServer {
+  string network = 1 [(validate.rules).string = {
+    in: [
+      "tcp",
+      "tcp4",
+      "tcp6"
+    ]
+  }];
+  string addr = 2 [(validate.rules).string = {min_len: 1}];
+  google.protobuf.Duration timeout = 3 [(validate.rules).duration = {
+    gt: {}
+  }];
+  CORS cors = 4;
+}
+
+message GRPCServer {
+  string network = 1 [(validate.rules).string = {
+    in: [
+      "tcp",
+      "tcp4",
+      "tcp6"
+    ]
+  }];
+  string addr = 2 [(validate.rules).string = {min_len: 1}];
+  google.protobuf.Duration timeout = 3 [(validate.rules).duration = {
+    gt: {}
+  }];
+}
+
+message Database {
+  string driver = 1 [(validate.rules).string = {min_len: 1}];
+  string source = 2 [(validate.rules).string = {min_len: 1}];
+  google.protobuf.BoolValue run_migrations = 3;
+  sint32 max_idle_conns = 4 [(validate.rules).sint32 = {gte: 0}];
+  sint32 max_open_conns = 5 [(validate.rules).sint32 = {gt: 0}];
+  google.protobuf.Duration conn_max_lifetime = 6 [(validate.rules).duration = {
+    gt: {}
+  }];
+}
+
+// PubSub Config
+// The core AMQP Configuration Object
+message RabbitMQServer {
+  // 1. Connection (Shared)
+  string addr = 1 [(validate.rules).string = {
+    min_len: 1
+    pattern: "^amqps?://.*"
+  }]; // amqp://user:pass@host:port/vhost
+  google.protobuf.Duration dial_timeout = 2 [(validate.rules).duration = {
+    gt: {}
+  }]; // Connection timeout
+
+  // 2. Publishing Configuration (Producers)
+  message Exchange {
+    string name = 1 [(validate.rules).string = {min_len: 1}]; // e.g., "symbols.events"
+    string type = 2 [(validate.rules).string = {
+      in: [
+        "direct",
+        "topic",
+        "fanout",
+        "headers"
+      ]
+    }]; // direct, topic, fanout, headers
+    google.protobuf.BoolValue durable = 3; // Persist across restarts?
+    google.protobuf.BoolValue auto_delete = 4; // Delete when unused?
+  }
+
+  // 3. Subscribing Configuration (Consumers)
+  message Queue {
+    string name = 1 [(validate.rules).string = {min_len: 1}]; // e.g., "symbols.price_updates"
+    google.protobuf.BoolValue durable = 2;
+    google.protobuf.BoolValue auto_delete = 3;
+    google.protobuf.BoolValue exclusive = 4; // Only this connection uses it?
+    string binding_key = 5; // Routing key pattern (e.g., "symbol.*.updated")
+    int32 prefetch_count = 6 [(validate.rules).int32 = {gt: 0}]; // QoS: How many unacked msgs to handle at once
+    int32 worker_count = 7 [(validate.rules).int32 = {gt: 0}]; // How many concurrent goroutines to process msgs
+  }
+
+  Exchange exchange = 3; // The exchange we publish to (or bind queue to)
+  Queue queue = 4; // The queue we listen on (if this is a consumer)
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"platform/pagination"
+	"symbols/internal/biz/events"
 	"symbols/internal/data/common"
 
 	"github.com/go-kratos/kratos/v2/log"
@@ -14,19 +15,21 @@ import (
 // SymbolUseCase is a Symbol use case.
 type symbolUseCase struct {
 	repo      SymbolRepo
+	pub       events.Publisher
 	log       *log.Helper
 	validator *validator.Validate
 	tm        common.Transaction
 }
 
 // NewSymbolUseCase creates a new Symbol use case.
-func NewSymbolUseCase(repo SymbolRepo, validator *validator.Validate, tm common.Transaction, logger log.Logger) SymbolUseCase {
-	return &symbolUseCase{repo: repo, validator: validator, tm: tm, log: log.NewHelper(logger)}
+func NewSymbolUseCase(repo SymbolRepo, validator *validator.Validate, tm common.Transaction, pub events.Publisher, logger log.Logger) SymbolUseCase {
+	return &symbolUseCase{repo: repo, validator: validator, pub: pub, tm: tm, log: log.NewHelper(logger)}
 }
 
+// GetSymbol gets a Symbol by its ID.
 func (uc *symbolUseCase) GetSymbol(ctx context.Context, id uint64) (*Symbol, error) {
 
-	// Validate ID before calling repository
+	// Validate ID before calling a repository
 	if id <= 0 {
 		return nil, ErrInvalidID
 	}
@@ -42,6 +45,8 @@ func (uc *symbolUseCase) GetSymbol(ctx context.Context, id uint64) (*Symbol, err
 		// Any other database error
 		return nil, ErrDatabaseOperation
 	}
+
+	uc.pub.Publish(ctx, "events", make([]byte, 10))
 
 	return symbol, nil
 }
@@ -64,6 +69,8 @@ func (uc *symbolUseCase) CreateSymbol(ctx context.Context, g *Symbol) (*Symbol, 
 		// Generic database error
 		return nil, ErrDatabaseOperation
 	}
+
+	//uc.pub.Publish(ctx, 't')
 
 	return symbol, nil
 }
@@ -139,6 +146,8 @@ func (uc *symbolUseCase) ListSymbols(ctx context.Context, params *pagination.Off
 		uc.log.WithContext(ctx).Errorf("Failed to list symbols: %v", err)
 		return nil, nil, ErrDatabaseOperation
 	}
+
+	uc.pub.Publish(ctx, "events", make([]byte, 10))
 
 	return symbols, meta, nil
 }

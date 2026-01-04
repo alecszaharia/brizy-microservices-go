@@ -3,7 +3,7 @@ package server
 import (
 	v1 "contracts/gen/symbols/v1"
 	"platform/middleware"
-	"symbols/internal/conf"
+	"symbols/internal/conf/gen"
 	"symbols/internal/service"
 
 	"github.com/go-kratos/kratos/contrib/middleware/validate/v2"

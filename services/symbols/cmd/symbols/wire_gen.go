@@ -10,8 +10,9 @@ import (
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
 	"symbols/internal/biz"
-	"symbols/internal/conf"
+	"symbols/internal/conf/gen"
 	"symbols/internal/data"
+	"symbols/internal/data/mq"
 	"symbols/internal/data/repo"
 	"symbols/internal/server"
 	"symbols/internal/service"
@@ -33,7 +34,9 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*
 	transaction := data.NewTransaction(dataData)
 	symbolRepo := repo.NewSymbolRepo(db, transaction, logger)
 	validate := biz.NewSymbolValidator()
-	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, logger)
+	publisher := data.NewAmqpPublisher(confData, logger)
+	eventPublisher := mq.NewEventPublisher(publisher)
+	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, eventPublisher, logger)
 	symbolService := service.NewSymbolService(symbolUseCase)
 	grpcServer := server.NewGRPCServer(confServer, symbolService, logger)
 	httpServer := server.NewHTTPServer(confServer, symbolService, logger)

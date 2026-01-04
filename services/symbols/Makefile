@@ -17,6 +17,9 @@ endif
 
 .PHONY: init config api build generate all test coverage help
 
+APP_NAME := symbols
+BIN_DIR := bin
+
 # init env
 init:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -29,15 +32,24 @@ init:
 
 # generate internal proto
 config:
+	buf dep update
+	buf lint
+	buf format -w
 	buf generate
 
 # build
-build:
-	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./...
+build: service worker
+
+service: generate
+	go build -o $(BIN_DIR)/$(APP_NAME) ./cmd/$(APP_NAME)
+
+worker: generate
+	go build -o $(BIN_DIR)/$(APP_NAME)-worker ./cmd/$(APP_NAME)-worker
 
 # generate wire files
 generate:
-	GOWORK=off go generate ./...
+	wire ./cmd/symbols
+	wire ./cmd/symbols-worker
 	go mod tidy
 
 # generate all

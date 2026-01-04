@@ -6,21 +6,23 @@ This directory contains **Protocol Buffer (protobuf) definitions** for all micro
 
 ```
 api/
-├── {service-name}/                   # {service-name} service API definitions
-│   └── v1/
-│       ├── {service-name}.proto      # Service definitions (RPCs, messages)
-│       └── error_reason.proto # Service-specific error codes
-└── conf/                      # Shared configuration protos
-    └── v1/
-        └── servers.proto      # Common server configurations
+├── service/                            # Service-specific API definitions
+│   └── {service-name}/                 # {service-name} service API definitions
+│       └── v1/
+│           ├── {service-name}.proto    # Service definitions (RPCs, messages)
+│           └── error_reason.proto      # Service-specific error codes
+└── common/                             # Shared protos across all services
+    └── conf/                           # Shared configuration protos
+        └── v1/
+            └── conf.proto              # Common configuration definitions
 ```
 
 ### Directory Organization
 
-- **`{service-name}/v1/`** - Service-specific API definitions versioned at v1
+- **`service/{service-name}/v1/`** - Service-specific API definitions versioned at v1
     - `{service-name}.proto` - gRPC service interfaces, request/response messages
     - `error_reason.proto` - Enum definitions for service-specific error codes - not mandatory
-- **`conf/v1/`** - Shared configuration proto definitions used across services
+- **`common/conf/v1/`** - Shared configuration proto definitions used across all services
 
 ## Purpose
 
@@ -56,22 +58,22 @@ make contracts-breaking
 
 ### Generated Output
 
-Generated code is placed in `contracts/{service-name}/v1/` and includes:
+Generated code is placed in `contracts/gen/` and includes:
 
-- **`{service}_grpc.pb.go`** - gRPC service and client stubs (via `protoc-gen-go-grpc`)
 - **`{service}.pb.go`** - Message type definitions (via `protoc-gen-go`)
+- **`{service}_grpc.pb.go`** - gRPC service and client stubs (via `protoc-gen-go-grpc`)
 - **`{service}_http.pb.go`** - HTTP bindings for Kratos (via `protoc-gen-go-http`)
-- **`{service}.pb.validate.go`** - Validation code (via `protoc-gen-validate`)
-- **`{service}.openapi.yaml`** - OpenAPI specification (via `protoc-gen-openapi`)
-- **Connect RPC code** - Browser-friendly gRPC support
+- **`v1connect/{service}.connect.go`** - Connect RPC client/server code (via `protoc-gen-connectrpc`)
+- **`api.json`** - OpenAPI v2 (Swagger) specification (via `protoc-gen-openapiv2`)
 
 ### Workflow
 
-1. Define or modify proto files in `api/{service-name}/v1/`
+1. Define or modify proto files in `api/service/{service-name}/v1/` or `api/common/conf/v1/`
 2. Run `make contracts-all` to format, lint, and generate code
 3. Import generated code in service implementations:
    ```go
-   import pb "contracts/{service-name}/v1"
+   import pb "contracts/gen/service/{service-name}/v1"
+   import confpb "contracts/gen/common/conf/v1"
    ```
 
 **WARNING**: After modifying proto definitions, you must re-run `make contracts-generate` (or `make contracts-all`) to

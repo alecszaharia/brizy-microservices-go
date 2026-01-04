@@ -12,24 +12,21 @@ services:
       - .traefik/traefik.yaml:/etc/traefik/traefik.yml # Mount the config file
     networks:
       - service-network
-  test:
-    build:
-      context: ./
-      dockerfile: services/test/Dockerfile
-    networks:
-      - service-network
+#  test:
+#    build:
+#      context: ./
+#      dockerfile: services/test/Dockerfile
+#    networks:
+#      - service-network
   symbols:
-    image: symbols:latest
-    ulimits:
-      nofile:
-        soft: 65535
-        hard: 65535
+    image: symbols:dev
     build:
       context: ./
       dockerfile: services/symbols/Dockerfile
       args:
         - TARGETARCH=arm64
         - TARGETOS=linux
+        - VERSION=dev
     container_name: symbols
     networks:
       - service-network
@@ -51,11 +48,27 @@ services:
       - "traefik.http.routers.symbolsgrpc.entrypoints=grpc"
       - "traefik.http.routers.symbolsgrpc.service=symbolsgrpc"
       - "traefik.http.services.symbolsgrpc.loadbalancer.server.url=h2c://symbols:7000"
-      - "traefik.http.services.symbolsgrpc.loadbalancer.server.scheme=h2c"
     environment:
       - CONFIG_PATH=/data/conf
-      - GOMAXPROCS=12
-      - KRATOS_DB_DSN=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=True&loc=Local
+      - GOMAXPROCS=6
+      - DB_DSN=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=True&loc=Local
+
+  symbols-worker:
+    image: symbols:dev
+    container_name: symbols-worker
+    networks:
+      - service-network
+    volumes:
+      - ./services/symbols/configs:/data/conf
+    command:  [ "./symbols-worker", "--conf", "/data/conf/config.yaml" ]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - CONFIG_PATH=/data/conf
+      - GOMAXPROCS=6
+      - DB_DSN=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=True&loc=Local
+
   serena-symbols:
     build:
       context: .serena/
@@ -72,6 +85,7 @@ services:
       - "24282:24282"  # Dashboard port (default 0x5EDA = 24282)
     volumes:
       - ./:${PWD}/
+
   mysql:
     image: mysql:8.0
     container_name: symbols-mysql
@@ -89,6 +103,16 @@ services:
       timeout: 5s
       retries: 5
       interval: 10s
+
+  rabbitmq:
+    image: rabbitmq:3.9.11-management-alpine
+    networks:
+      - service-network
+    labels:
+      traefik.enable: true
+      traefik.http.routers.rabbitmq.rule: "Host(`rabbitmq.localhost`)"
+      traefik.http.routers.rabbitmq.entrypoints: "web"
+      traefik.http.services.rabbitmq.loadbalancer.server.port: 15672
 
 volumes:
   mysql_data:

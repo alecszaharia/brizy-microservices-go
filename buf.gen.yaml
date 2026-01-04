@@ -35,4 +35,4 @@ plugins:
       - output_format=json
     out: contracts/gen
 inputs:
-  - directory: api
+  - directory: ./api/service

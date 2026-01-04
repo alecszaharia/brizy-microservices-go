@@ -3,7 +3,7 @@ package server
 import (
 	v1 "contracts/gen/symbols/v1"
 	"platform/middleware"
-	"symbols/internal/conf"
+	"symbols/internal/conf/gen"
 	"symbols/internal/service"
 
 	"github.com/go-kratos/kratos/contrib/middleware/validate/v2"
@@ -49,7 +49,7 @@ func NewHTTPServer(c *conf.Server, symbolService *service.SymbolService, logger 
 
 // NewHTTPServer new an HTTP server.
 // buildCORSOptions constructs CORS options from configuration.
-func buildCORSOptions(corsConfig *conf.Server_HTTP_CORS) []handlers.CORSOption {
+func buildCORSOptions(corsConfig *conf.CORS) []handlers.CORSOption {
 	var opts []handlers.CORSOption
 
 	if len(corsConfig.AllowedOrigins) > 0 {
@@ -68,7 +68,7 @@ func buildCORSOptions(corsConfig *conf.Server_HTTP_CORS) []handlers.CORSOption {
 		opts = append(opts, handlers.ExposedHeaders(corsConfig.ExposedHeaders))
 	}
 
-	if corsConfig.AllowCredentials {
+	if corsConfig.AllowCredentials.GetValue() {
 		opts = append(opts, handlers.AllowCredentials())
 	}
 

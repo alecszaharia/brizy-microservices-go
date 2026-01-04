@@ -1,7 +1,10 @@
 # For details on buf.yaml configuration, visit https://buf.build/docs/configuration/v2/buf-yaml
 version: v2
 modules:
-  - path: api/
+  - path: api/service
+    name: buf.build/brizy/api
+  - path: api/common
+    name: buf.build/brizy/conf
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/envoyproxy/protoc-gen-validate
@@ -12,4 +15,4 @@ lint:
     - ENUM_VALUE_PREFIX
 breaking:
   use:
-    - FILE
+    - PACKAGE
