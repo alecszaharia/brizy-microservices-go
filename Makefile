@@ -9,23 +9,27 @@ init:
 	go install github.com/google/gnostic/cmd/protoc-gen-openapi@latest
 	go install github.com/google/wire/cmd/wire@latest
 	go install github.com/envoyproxy/protoc-gen-validate@latest
+	go install github.com/bufbuild/buf/cmd/buf@v1.62.0
 
 # Contracts related
 
 # Generate code from protobuf definitions
-contracts-generate:
+contracts-deps:
+	buf dep update
+
+contracts-generate: contracts-deps
 	buf generate
 
 # Lint protobuf files
-contracts-lint:
+contracts-lint: contracts-deps
 	buf lint
 
 # Check for breaking changes
-contracts-breaking:
+contracts-breaking: contracts-deps
 	buf breaking --against '.git#branch=main'
 
 # Format protobuf files
-contracts-format:
+contracts-format: contracts-deps
 	buf format -w
 
 # Clean generated files

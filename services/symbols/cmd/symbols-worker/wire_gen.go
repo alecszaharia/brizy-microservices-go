@@ -22,8 +22,8 @@ import (
 // wireApp init kratos application.
 func wireApp(server *conf.Server, data *conf.Data, logger log.Logger) (*kratos.App, func(), error) {
 	router := worker.NewRouter(logger)
-	workerWorker := worker.NewWorker(router, logger)
-	app := newApp(workerWorker, logger)
+	runner := worker.NewWorker(router, logger)
+	app := newApp(runner, logger)
 	return app, func() {
 	}, nil
 }

@@ -18,7 +18,12 @@ import (
 // ProviderSet is server providers.
 var ProviderSet = wire.NewSet(NewRouter, NewWorker, mq.NewSubscriber)
 
-type Worker struct {
+type Runner interface {
+	Run(ctx context.Context) error
+	Close(ctx context.Context) error
+}
+
+type worker struct {
 	logger       log.Logger
 	name         string
 	router       *message.Router
@@ -31,8 +36,8 @@ type Worker struct {
 	err  error
 }
 
-func NewWorker(router *message.Router, logger log.Logger) *Worker {
-	return &Worker{
+func NewWorker(router *message.Router, logger log.Logger) Runner {
+	return &worker{
 		logger:       logger,
 		name:         "watermill-router",
 		router:       router,
@@ -75,21 +80,21 @@ func NewRouter(logger log.Logger) *message.Router {
 	return router
 }
 
-func (w *Worker) WithName(name string) *Worker {
+func (w *worker) WithName(name string) *worker {
 	if name != "" {
 		w.name = name
 	}
 	return w
 }
 
-func (w *Worker) WithCloseTimeout(d time.Duration) *Worker {
+func (w *worker) WithCloseTimeout(d time.Duration) *worker {
 	if d > 0 {
 		w.closeTimeout = d
 	}
 	return w
 }
 
-func (w *Worker) Run(ctx context.Context) error {
+func (w *worker) Run(ctx context.Context) error {
 	w.startOnce.Do(func() {
 		go func() {
 			defer close(w.done)
@@ -101,7 +106,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	return w.err
 }
 
-func (w *Worker) Close(ctx context.Context) error {
+func (w *worker) Close(ctx context.Context) error {
 	w.stopOnce.Do(func() {
 		stopCtx, cancel := context.WithTimeout(ctx, w.closeTimeout)
 		defer cancel()

@@ -6,6 +6,7 @@ import (
 	"os"
 	"platform/middleware"
 	"symbols/internal/conf/gen"
+	"symbols/internal/worker"
 	"time"
 
 	"github.com/go-kratos/kratos/v2"
@@ -33,12 +34,7 @@ func init() {
 	flag.StringVar(&configFile, "conf", "configs/config.yaml", "config path, eg: --conf config.yaml")
 }
 
-type Worker interface {
-	Run(ctx context.Context) error
-	Close(ctx context.Context) error
-}
-
-func newApp(runner Worker, logger log.Logger) *kratos.App {
+func newApp(runner worker.Runner, logger log.Logger) *kratos.App {
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
