@@ -20,7 +20,7 @@ func NewHTTPServer(c *conf.Server, symbolService *service.SymbolService, logger 
 		http.Middleware(
 			recovery.Recovery(),
 			ratelimit.Server(),
-			middleware.RequestIDMiddleware(),
+			middleware.RequestIDMiddleware(logger),
 			logging.Server(logger),
 			validate.ProtoValidate(),
 		),

@@ -21,7 +21,7 @@ func NewGRPCServer(c *conf.Server, symbolService *service.SymbolService, logger 
 			recovery.Recovery(),
 			ratelimit.Server(),
 			logging.Server(logger),
-			middleware.RequestIDMiddleware(),
+			middleware.RequestIDMiddleware(logger),
 			validate.ProtoValidate(),
 		),
 	}

@@ -13,27 +13,27 @@ const RequestHeader = "X-Request-ID"
 
 type requestIDKey struct{}
 
-func RequestIDMiddleware() middleware.Middleware {
-
+func RequestIDMiddleware(logger *log.Helper) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
 
 			var requestID string
+			tr, hasTransport := transport.FromServerContext(ctx)
 
-			if tr, ok := transport.FromServerContext(ctx); ok {
+			if hasTransport {
 				requestID = tr.RequestHeader().Get(RequestHeader)
 			}
 
-			if requestID == "" {
-				requestID = uuid.New().String()
+			l := logger.WithContext(ctx)
+			if requestID == "" || !isValidRequestID(requestID, l) {
+				requestID = generateId(l)
 			}
 
 			// Add to context
 			ctx = context.WithValue(ctx, requestIDKey{}, requestID)
 
-			// Add to Kratos log context
 			// Add to response header if transport available
-			if tr, ok := transport.FromServerContext(ctx); ok {
+			if hasTransport {
 				tr.ReplyHeader().Set(RequestHeader, requestID)
 			}
 
@@ -51,4 +51,20 @@ func RequestID() log.Valuer {
 		}
 		return ""
 	}
+}
+
+func generateId(logger *log.Helper) string {
+	requestID := uuid.New().String()
+	logger.Debugf("Generated new request ID: %s", requestID)
+	return requestID
+}
+
+func isValidRequestID(id string, logger *log.Helper) bool {
+	// validate id
+	if err := uuid.Validate(id); err != nil {
+		logger.Warnf("request id is invalid: %v", err)
+		return false
+	}
+
+	return true
 }

@@ -2,8 +2,10 @@ package middleware
 
 import (
 	"context"
+	"io"
 	"testing"
 
+	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/transport"
 	"github.com/google/uuid"
@@ -76,6 +78,12 @@ func (m *mockHeader) Values(key string) []string {
 	return m.headers[key]
 }
 
+// createTestLogger creates a test logger for use in tests
+func createTestLogger() *log.Helper {
+	logger := log.NewStdLogger(io.Discard)
+	return log.NewHelper(logger)
+}
+
 func TestRequestIDMiddleware(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -118,7 +126,75 @@ func TestRequestIDMiddleware(t *testing.T) {
 			expectHandlerOk: true,
 		},
 		{
-			name: "uses existing X-Request-ID from request header (any format)",
+			name: "uses existing valid UUID X-Request-ID from request header",
+			setupContext: func() context.Context {
+				mt := newMockTransporter()
+				validUUID := uuid.New().String()
+				mt.requestHeaders["X-Request-ID"] = []string{validUUID}
+				return transport.NewServerContext(context.Background(), mt)
+			},
+			setupRequest: "test-request",
+			checkContext: func(t *testing.T, ctx context.Context) {
+				requestID := ctx.Value(requestIDKey{})
+				assert.NotNil(t, requestID)
+
+				ridStr, ok := requestID.(string)
+				assert.True(t, ok)
+				assert.NotEmpty(t, ridStr)
+
+				// Verify it's a valid UUID
+				err := uuid.Validate(ridStr)
+				assert.NoError(t, err, "should use valid UUID from header")
+			},
+			checkTransport: func(t *testing.T, mt *MockTransporter) {
+				responseID := mt.replyHeaders["X-Request-ID"]
+				assert.NotNil(t, responseID)
+				assert.Len(t, responseID, 1)
+
+				// Should match the request header UUID
+				requestUUID := mt.requestHeaders["X-Request-ID"][0]
+				assert.Equal(t, requestUUID, responseID[0])
+			},
+			expectHandlerOk: true,
+		},
+		{
+			name: "rejects invalid UUID and generates new one (malformed UUID)",
+			setupContext: func() context.Context {
+				mt := newMockTransporter()
+				mt.requestHeaders["X-Request-ID"] = []string{"not-a-valid-uuid"}
+				return transport.NewServerContext(context.Background(), mt)
+			},
+			setupRequest: "test-request",
+			checkContext: func(t *testing.T, ctx context.Context) {
+				requestID := ctx.Value(requestIDKey{})
+				assert.NotNil(t, requestID)
+
+				ridStr, ok := requestID.(string)
+				assert.True(t, ok)
+				assert.NotEmpty(t, ridStr)
+
+				// Should be different from the invalid one
+				assert.NotEqual(t, "not-a-valid-uuid", ridStr)
+
+				// Should be a valid UUID (newly generated)
+				err := uuid.Validate(ridStr)
+				assert.NoError(t, err, "should generate new valid UUID for invalid input")
+			},
+			checkTransport: func(t *testing.T, mt *MockTransporter) {
+				responseID := mt.replyHeaders["X-Request-ID"]
+				assert.NotNil(t, responseID)
+				assert.Len(t, responseID, 1)
+
+				// Response should contain new UUID, not the invalid one
+				assert.NotEqual(t, "not-a-valid-uuid", responseID[0])
+
+				err := uuid.Validate(responseID[0])
+				assert.NoError(t, err)
+			},
+			expectHandlerOk: true,
+		},
+		{
+			name: "rejects invalid UUID and generates new one (random string)",
 			setupContext: func() context.Context {
 				mt := newMockTransporter()
 				mt.requestHeaders["X-Request-ID"] = []string{"custom-request-id-12345"}
@@ -128,13 +204,54 @@ func TestRequestIDMiddleware(t *testing.T) {
 			checkContext: func(t *testing.T, ctx context.Context) {
 				requestID := ctx.Value(requestIDKey{})
 				assert.NotNil(t, requestID)
-				assert.Equal(t, "custom-request-id-12345", requestID)
+
+				ridStr, ok := requestID.(string)
+				assert.True(t, ok)
+				assert.NotEmpty(t, ridStr)
+
+				// Should not be the invalid custom string
+				assert.NotEqual(t, "custom-request-id-12345", ridStr)
+
+				// Should be a valid UUID
+				err := uuid.Validate(ridStr)
+				assert.NoError(t, err, "should generate new valid UUID for custom string")
 			},
 			checkTransport: func(t *testing.T, mt *MockTransporter) {
 				responseID := mt.replyHeaders["X-Request-ID"]
 				assert.NotNil(t, responseID)
 				assert.Len(t, responseID, 1)
-				assert.Equal(t, "custom-request-id-12345", responseID[0])
+				assert.NotEqual(t, "custom-request-id-12345", responseID[0])
+			},
+			expectHandlerOk: true,
+		},
+		{
+			name: "rejects invalid UUID and generates new one (partial UUID)",
+			setupContext: func() context.Context {
+				mt := newMockTransporter()
+				mt.requestHeaders["X-Request-ID"] = []string{"550e8400-e29b-41d4-a716"}
+				return transport.NewServerContext(context.Background(), mt)
+			},
+			setupRequest: "test-request",
+			checkContext: func(t *testing.T, ctx context.Context) {
+				requestID := ctx.Value(requestIDKey{})
+				assert.NotNil(t, requestID)
+
+				ridStr, ok := requestID.(string)
+				assert.True(t, ok)
+				assert.NotEmpty(t, ridStr)
+
+				// Should not be the partial UUID
+				assert.NotEqual(t, "550e8400-e29b-41d4-a716", ridStr)
+
+				// Should be a valid complete UUID
+				err := uuid.Validate(ridStr)
+				assert.NoError(t, err, "should generate new valid UUID for partial UUID")
+			},
+			checkTransport: func(t *testing.T, mt *MockTransporter) {
+				responseID := mt.replyHeaders["X-Request-ID"]
+				assert.NotNil(t, responseID)
+				assert.Len(t, responseID, 1)
+				assert.NotEqual(t, "550e8400-e29b-41d4-a716", responseID[0])
 			},
 			expectHandlerOk: true,
 		},
@@ -205,8 +322,9 @@ func TestRequestIDMiddleware(t *testing.T) {
 				return "response", nil
 			}
 
-			// Create middleware
-			mw := RequestIDMiddleware()
+			// Create middleware with test logger
+			logger := createTestLogger()
+			mw := RequestIDMiddleware(logger)
 			handler := mw(mockHandler)
 
 			// Setup context
@@ -280,11 +398,13 @@ func TestRequestIDMiddleware_HandlerChainPropagation(t *testing.T) {
 	}
 
 	// Build the middleware chain: RequestID -> First -> Second -> Handler
-	handler := RequestIDMiddleware()(firstMiddleware(secondMiddleware(finalHandler)))
+	logger := createTestLogger()
+	handler := RequestIDMiddleware(logger)(firstMiddleware(secondMiddleware(finalHandler)))
 
-	// Setup context with transport
+	// Setup context with transport and valid UUID
 	mt := newMockTransporter()
-	mt.requestHeaders["X-Request-ID"] = []string{"test-chain-id"}
+	validUUID := uuid.New().String()
+	mt.requestHeaders["X-Request-ID"] = []string{validUUID}
 	ctx := transport.NewServerContext(context.Background(), mt)
 
 	// Execute
@@ -298,9 +418,9 @@ func TestRequestIDMiddleware_HandlerChainPropagation(t *testing.T) {
 	assert.True(t, handlerCalled)
 
 	// Verify request ID was propagated through all layers
-	assert.Equal(t, "test-chain-id", requestIDInFirstMiddleware)
-	assert.Equal(t, "test-chain-id", requestIDInSecondMiddleware)
-	assert.Equal(t, "test-chain-id", requestIDInHandler)
+	assert.Equal(t, validUUID, requestIDInFirstMiddleware)
+	assert.Equal(t, validUUID, requestIDInSecondMiddleware)
+	assert.Equal(t, validUUID, requestIDInHandler)
 }
 
 func TestRequestIDMiddleware_ErrorPropagation(t *testing.T) {
@@ -311,7 +431,8 @@ func TestRequestIDMiddleware_ErrorPropagation(t *testing.T) {
 		return nil, expectedErr
 	}
 
-	mw := RequestIDMiddleware()
+	logger := createTestLogger()
+	mw := RequestIDMiddleware(logger)
 	handler := mw(mockHandler)
 
 	mt := newMockTransporter()
@@ -386,7 +507,8 @@ func TestRequestIDMiddleware_ConcurrentRequests(t *testing.T) {
 		return "success", nil
 	}
 
-	mw := RequestIDMiddleware()
+	logger := createTestLogger()
+	mw := RequestIDMiddleware(logger)
 	handler := mw(mockHandler)
 
 	// Launch concurrent requests
@@ -432,7 +554,8 @@ func TestRequestIDMiddleware_ContextPropagation(t *testing.T) {
 		return "success", nil
 	}
 
-	mw := RequestIDMiddleware()
+	logger := createTestLogger()
+	mw := RequestIDMiddleware(logger)
 	handler := mw(mockHandler)
 
 	// Setup context with transport and additional values
@@ -462,11 +585,13 @@ func BenchmarkRequestIDMiddleware_WithHeader(b *testing.B) {
 		return "success", nil
 	}
 
-	mw := RequestIDMiddleware()
+	logger := createTestLogger()
+	mw := RequestIDMiddleware(logger)
 	handler := mw(mockHandler)
 
 	mt := newMockTransporter()
-	mt.requestHeaders["X-Request-ID"] = []string{"benchmark-request-id"}
+	validUUID := uuid.New().String()
+	mt.requestHeaders["X-Request-ID"] = []string{validUUID}
 	ctx := transport.NewServerContext(context.Background(), mt)
 
 	b.ResetTimer()
@@ -480,7 +605,8 @@ func BenchmarkRequestIDMiddleware_GenerateUUID(b *testing.B) {
 		return "success", nil
 	}
 
-	mw := RequestIDMiddleware()
+	logger := createTestLogger()
+	mw := RequestIDMiddleware(logger)
 	handler := mw(mockHandler)
 
 	mt := newMockTransporter()
