@@ -9,18 +9,19 @@ import (
 	"github.com/google/uuid"
 )
 
-// Context key type to avoid collisions
+const RequestHeader = "X-Request-ID"
 
 type requestIDKey struct{}
 
 func RequestIDMiddleware() middleware.Middleware {
+
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
 
 			var requestID string
 
 			if tr, ok := transport.FromServerContext(ctx); ok {
-				requestID = tr.RequestHeader().Get("X-Request-ID")
+				requestID = tr.RequestHeader().Get(RequestHeader)
 			}
 
 			if requestID == "" {
@@ -33,7 +34,7 @@ func RequestIDMiddleware() middleware.Middleware {
 			// Add to Kratos log context
 			// Add to response header if transport available
 			if tr, ok := transport.FromServerContext(ctx); ok {
-				tr.ReplyHeader().Set("X-Request-ID", requestID)
+				tr.ReplyHeader().Set(RequestHeader, requestID)
 			}
 
 			return handler(ctx, req)
