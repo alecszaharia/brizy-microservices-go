@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
-	"platform/middleware"
+	p "platform/logger"
 	"symbols/internal/conf/gen"
 	"symbols/internal/worker"
 	"time"
@@ -14,7 +14,6 @@ import (
 	"github.com/go-kratos/kratos/v2/config/env"
 	"github.com/go-kratos/kratos/v2/config/file"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/go-kratos/kratos/v2/middleware/tracing"
 	_ "go.uber.org/automaxprocs"
 )
 
@@ -54,16 +53,7 @@ func newApp(runner worker.Runner, logger log.Logger) *kratos.App {
 
 func main() {
 	flag.Parse()
-	logger := log.With(log.NewStdLogger(os.Stdout),
-		"ts", log.DefaultTimestamp,
-		"caller", log.DefaultCaller,
-		"service.id", id,
-		"service.name", Name,
-		"service.version", Version,
-		"trace.id", tracing.TraceID(),
-		"span.id", tracing.SpanID(),
-		"request.id", middleware.RequestID(),
-	)
+	logger := p.NewLogger(id, Name, Version)
 
 	c := config.New(
 		config.WithSource(

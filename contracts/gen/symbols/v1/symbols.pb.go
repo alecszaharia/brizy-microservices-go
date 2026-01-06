@@ -954,9 +954,9 @@ const file_symbols_v1_symbols_proto_rawDesc = "" +
 	"\tGetSymbol\x12\x1c.symbols.v1.GetSymbolRequest\x1a\x1d.symbols.v1.GetSymbolResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/v1/symbols/{id}\x12n\n" +
 	"\fUpdateSymbol\x12\x1f.symbols.v1.UpdateSymbolRequest\x1a .symbols.v1.UpdateSymbolResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\x1a\x10/v1/symbols/{id}\x12k\n" +
 	"\fDeleteSymbol\x12\x1f.symbols.v1.DeleteSymbolRequest\x1a .symbols.v1.DeleteSymbolResponse\"\x18\x82\xd3\xe4\x93\x02\x12*\x10/v1/symbols/{id}\x12y\n" +
-	"\vListSymbols\x12\x1e.symbols.v1.ListSymbolsRequest\x1a\x1f.symbols.v1.ListSymbolsResponse\")\x82\xd3\xe4\x93\x02#\x12!/v1/projects/{project_id}/symbolsB\x84\x01\n" +
+	"\vListSymbols\x12\x1e.symbols.v1.ListSymbolsRequest\x1a\x1f.symbols.v1.ListSymbolsResponse\")\x82\xd3\xe4\x93\x02#\x12!/v1/projects/{project_id}/symbolsB\x92\x01\n" +
 	"\x0ecom.symbols.v1B\fSymbolsProtoP\x01Z\x1bcontracts/gen/symbols/v1;v1\xa2\x02\x03SXX\xaa\x02\n" +
-	"Symbols.V1\xca\x02\n" +
+	"Symbols.V1\xba\x02\vSymbols_V1_\xca\x02\n" +
 	"Symbols\\V1\xe2\x02\x16Symbols\\V1\\GPBMetadata\xea\x02\vSymbols::V1b\x06proto3"
 
 var (

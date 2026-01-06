@@ -25,14 +25,13 @@ This installs:
 
 - `protoc-gen-go` - Go protobuf code generation
 - `protoc-gen-go-grpc` - Go gRPC code generation
+- `protoc-gen-validate` - Protobuf validation rules
 - `protoc-gen-go-http` - Kratos HTTP bindings
 - `protoc-gen-openapi` - OpenAPI specification generation
-- `protoc-gen-validate` - Protobuf validation rules
+- `protoc-gen-connect-go` - Connect RPC code generation
+- `protoc-gen-openapiv2` - OpenAPI v2 (Swagger) specification generation
 - `wire` - Dependency injection code generation
 - `kratos` - Kratos framework CLI
-
-**Note**: Remote buf plugins (Connect RPC, OpenAPI v2) are automatically managed by buf and don't require local
-installation.
 
 ## Quick Start
 
@@ -67,6 +66,7 @@ brizy-go-services/
 │   └── README.md                 # Contracts documentation
 ├── platform/            # Shared platform utilities
 │   ├── go.mod                    # Platform module definition
+│   ├── logger/          # Centralized logger factory with trace/request ID support
 │   ├── middleware/      # Request ID middleware with context propagation
 │   ├── pagination/      # Offset-based pagination utilities
 │   └── event/           # Event handling utilities

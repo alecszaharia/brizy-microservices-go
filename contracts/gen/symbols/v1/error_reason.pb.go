@@ -100,9 +100,9 @@ const file_symbols_v1_error_reason_proto_rawDesc = "" +
 	"\n" +
 	"INVALID_ID\x10\x05\x12\x10\n" +
 	"\fINVALID_DATA\x10\x06\x12\x12\n" +
-	"\x0eDATABASE_ERROR\x10\aB\x88\x01\n" +
+	"\x0eDATABASE_ERROR\x10\aB\x96\x01\n" +
 	"\x0ecom.symbols.v1B\x10ErrorReasonProtoP\x01Z\x1bcontracts/gen/symbols/v1;v1\xa2\x02\x03SXX\xaa\x02\n" +
-	"Symbols.V1\xca\x02\n" +
+	"Symbols.V1\xba\x02\vSymbols_V1_\xca\x02\n" +
 	"Symbols\\V1\xe2\x02\x16Symbols\\V1\\GPBMetadata\xea\x02\vSymbols::V1b\x06proto3"
 
 var (

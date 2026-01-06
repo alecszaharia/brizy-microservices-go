@@ -2,7 +2,6 @@
 version: v2
 modules:
   - path: api/service
-    name: buf.build/brizy/api
 deps:
   - buf.build/googleapis/googleapis
   - buf.build/envoyproxy/protoc-gen-validate

@@ -1,5 +1,5 @@
 ---
-name: kratos-go-expert
+name: kratos-expert
 description: Expert Go developer specializing in Kratos v2.9.2 microservices framework in Go 1.25 workspace. Use for implementing Clean Architecture features with Protocol Buffers, debugging Wire dependency injection, GORM repository patterns, dual transport (HTTP/gRPC) setup, Kratos middleware, make command troubleshooting, or fixing build/generation issues in Kratos projects.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet

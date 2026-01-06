@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"os"
-	"platform/middleware"
+	p "platform/logger"
 	"symbols/internal/conf/gen"
 
 	"github.com/go-kratos/kratos/v2"
@@ -11,7 +11,6 @@ import (
 	"github.com/go-kratos/kratos/v2/config/env"
 	"github.com/go-kratos/kratos/v2/config/file"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/go-kratos/kratos/v2/middleware/tracing"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/go-kratos/kratos/v2/transport/http"
 	_ "go.uber.org/automaxprocs"
@@ -49,16 +48,7 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 
 func main() {
 	flag.Parse()
-	logger := log.With(log.NewStdLogger(os.Stdout),
-		"ts", log.DefaultTimestamp,
-		"caller", log.DefaultCaller,
-		"service.id", id,
-		"service.name", Name,
-		"service.version", Version,
-		"trace.id", tracing.TraceID(),
-		"span.id", tracing.SpanID(),
-		"request.id", middleware.RequestID(),
-	)
+	logger := p.NewLogger(id, Name, Version)
 
 	c := config.New(
 		config.WithSource(

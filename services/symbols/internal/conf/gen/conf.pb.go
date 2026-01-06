@@ -772,8 +772,8 @@ const file_conf_proto_rawDesc = "" +
 	"\vbinding_key\x18\x05 \x01(\tR\n" +
 	"bindingKey\x12.\n" +
 	"\x0eprefetch_count\x18\x06 \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\rprefetchCount\x12*\n" +
-	"\fworker_count\x18\a \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\vworkerCountB\x9f\x01\n" +
-	"\x14com.symbols.api.confB\tConfProtoP\x01Z\x1asymbols/internal/conf;conf\xa2\x02\x03SAC\xaa\x02\x10Symbols.Api.Conf\xca\x02\x10Symbols\\Api\\Conf\xe2\x02\x1cSymbols\\Api\\Conf\\GPBMetadata\xea\x02\x12Symbols::Api::Confb\x06proto3"
+	"\fworker_count\x18\a \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\vworkerCountB\xb3\x01\n" +
+	"\x14com.symbols.api.confB\tConfProtoP\x01Z\x1asymbols/internal/conf;conf\xa2\x02\x03SAC\xaa\x02\x10Symbols.Api.Conf\xba\x02\x11Symbols_Api_Conf_\xca\x02\x10Symbols\\Api\\Conf\xe2\x02\x1cSymbols\\Api\\Conf\\GPBMetadata\xea\x02\x12Symbols::Api::Confb\x06proto3"
 
 var (
 	file_conf_proto_rawDescOnce sync.Once
