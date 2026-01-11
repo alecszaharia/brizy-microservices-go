@@ -117,11 +117,13 @@ cd services/{service-name} && go test -v ./internal/...
 The `platform/` module contains shared code:
 
 - `events/` - Publisher/Subscriber interfaces for event-driven architecture
+- `logger/` - Structured logging with Watermill integration
+- `metrics/` - **Prometheus metrics export for observability** (HTTP, gRPC, pub/sub metrics)
 - `middleware/` - Request ID middleware with context propagation
 - `pagination/` - Offset-based pagination utilities
 - `adapters/` - Common transformers and adapters
 
-Platform code is imported by services as `platform/{package}` (e.g., `platform/events`, `platform/middleware`).
+Platform code is imported by services as `platform/{package}` (e.g., `platform/events`, `platform/metrics`).
 
 ## Key Technical Details
 
@@ -268,6 +270,116 @@ Subscriber → Handler → Use Case (same request_id in logs)
 For detailed information on extending the pub/sub system, adding new event types, and troubleshooting:
 
 📖 See [docs/pubsub-architecture.md](docs/pubsub-architecture.md)
+
+## Metrics and Observability
+
+All services export Prometheus metrics for comprehensive observability.
+
+### Metrics Infrastructure
+
+**Location**: `platform/metrics/`
+
+All services automatically export metrics on the `/metrics` endpoint (configurable) in Prometheus format.
+
+**Configuration** (in `internal/conf/conf.proto`):
+
+```protobuf
+message Metrics {
+  bool enabled = 1;              // Enable/disable metrics (default: true)
+  string service_name = 2;       // Namespace for metrics (e.g., "symbols")
+  string path = 3;               // Endpoint path (default: "/metrics")
+  bool include_runtime = 4;      // Include Go runtime metrics (default: true)
+}
+```
+
+**YAML Configuration** (in `configs/config.yaml`):
+
+```yaml
+metrics:
+  enabled: true
+  service_name: symbols
+  path: /metrics
+  include_runtime: true
+```
+
+### Available Metrics
+
+**HTTP Server**:
+- `{service}_http_requests_total{method, route, status}` - Request count
+- `{service}_http_request_duration_seconds{method, route, status}` - Request latency
+
+**gRPC Server**:
+- `{service}_grpc_requests_total{service, method, status}` - Request count
+- `{service}_grpc_request_duration_seconds{service, method, status}` - Request latency
+
+**Watermill Pub/Sub**:
+- `{service}_watermill_published_total{topic}` - Messages published
+- `{service}_watermill_publish_duration_seconds{topic}` - Publish latency
+- `{service}_watermill_publish_errors_total{topic}` - Publish errors
+- `{service}_watermill_consumed_total{topic}` - Messages consumed
+- `{service}_watermill_consume_duration_seconds{topic}` - Consume latency
+- `{service}_watermill_consume_errors_total{topic}` - Consume errors
+- `{service}_watermill_handler_acks_total{topic}` - Acknowledged messages
+- `{service}_watermill_handler_nacks_total{topic}` - Nacked messages
+
+**Runtime** (if enabled):
+- `go_goroutines`, `go_memstats_*`, `go_gc_*`, `process_*`
+
+**Build Info**:
+- `{service}_build_info{version}` - Build version (always 1)
+
+### Custom Business Metrics
+
+Services can register custom metrics via the `metrics.Registry`:
+
+```go
+type MyUseCase struct {
+    counter   prometheus.Counter
+    histogram *prometheus.HistogramVec
+}
+
+func NewMyUseCase(registry *metrics.Registry) *MyUseCase {
+    return &MyUseCase{
+        counter: registry.NewCounter(
+            "operations_total",
+            "Total operations processed",
+        ),
+        histogram: registry.NewHistogramVec(
+            "operation_duration_seconds",
+            "Operation duration",
+            []float64{0.01, 0.05, 0.1, 0.5, 1.0},
+            []string{"operation_type"},
+        ),
+    }
+}
+```
+
+**Naming Conventions**:
+- All metrics automatically prefixed with service name
+- Use `snake_case`
+- Counters end with `_total`
+- Durations end with `_seconds`
+- Sizes end with `_bytes`
+- Avoid unbounded label values (user IDs, request IDs)
+
+### Integration Pattern
+
+Services integrate metrics via Wire dependency injection:
+
+1. Add `Metrics` config to `internal/conf/conf.proto`
+2. Create `server.NewMetricsRegistry()` provider
+3. Add `metrics.HTTPMiddleware()` and `metrics.GRPCMiddleware()` to middleware chain
+4. Wrap pub/sub with `metrics.NewPublisherWithMetrics()` and `metrics.NewSubscriberWithMetrics()`
+5. Register metrics handler at configured path
+6. Regenerate Wire: `make generate`
+
+**Reference Implementation**: `services/symbols/`
+
+### Documentation
+
+For detailed setup instructions, custom metrics, and troubleshooting:
+
+📖 See [platform/metrics/README.md](platform/metrics/README.md)
 
 ### Mandatory actions:
 

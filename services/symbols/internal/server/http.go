@@ -2,12 +2,14 @@ package server
 
 import (
 	v1 "contracts/gen/symbols/v1"
+	"platform/metrics"
 	"platform/middleware"
 	"symbols/internal/conf/gen"
 	"symbols/internal/service"
 
 	"github.com/go-kratos/kratos/contrib/middleware/validate/v2"
 	"github.com/go-kratos/kratos/v2/log"
+	kratos_middleware "github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/middleware/logging"
 	"github.com/go-kratos/kratos/v2/middleware/ratelimit"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
@@ -15,15 +17,26 @@ import (
 	"github.com/gorilla/handlers"
 )
 
-func NewHTTPServer(c *conf.Server, symbolService *service.SymbolService, logger log.Logger) *http.Server {
+func NewHTTPServer(c *conf.Server, mc *conf.Metrics, reg *metrics.Registry, symbolService *service.SymbolService, logger log.Logger) *http.Server {
+	// Build middleware chain
+	middlewares := []kratos_middleware.Middleware{
+		recovery.Recovery(),
+		ratelimit.Server(),
+		middleware.RequestIDMiddleware(logger),
+	}
+
+	// Add metrics middleware if enabled
+	if mc != nil && mc.Enabled && reg != nil {
+		middlewares = append(middlewares, metrics.HTTPMiddleware(reg))
+	}
+
+	middlewares = append(middlewares,
+		logging.Server(logger),
+		validate.ProtoValidate(),
+	)
+
 	var opts = []http.ServerOption{
-		http.Middleware(
-			recovery.Recovery(),
-			ratelimit.Server(),
-			middleware.RequestIDMiddleware(logger),
-			logging.Server(logger),
-			validate.ProtoValidate(),
-		),
+		http.Middleware(middlewares...),
 	}
 
 	// Configure CORS if specified in config
@@ -43,6 +56,16 @@ func NewHTTPServer(c *conf.Server, symbolService *service.SymbolService, logger 
 	}
 
 	srv := http.NewServer(opts...)
+
+	// Register metrics endpoint if enabled
+	if mc != nil && mc.Enabled && reg != nil {
+		metricsPath := mc.Path
+		if metricsPath == "" {
+			metricsPath = "/metrics"
+		}
+		srv.Handle(metricsPath, metrics.NewMetricsHandler(reg))
+	}
+
 	v1.RegisterSymbolsServiceHTTPServer(srv, symbolService)
 	return srv
 }

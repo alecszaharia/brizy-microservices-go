@@ -73,7 +73,7 @@ func main() {
 
 	logger := p.NewLogger(bc.Log.Level, id, Name, Version)
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Log, logger)
+	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Log, bc.Metrics, logger)
 	if err != nil {
 		panic(err)
 	}

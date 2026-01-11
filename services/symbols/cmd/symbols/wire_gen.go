@@ -13,7 +13,6 @@ import (
 	"symbols/internal/biz"
 	"symbols/internal/conf/gen"
 	"symbols/internal/data"
-	"symbols/internal/data/mq"
 	"symbols/internal/data/repo"
 	"symbols/internal/server"
 	"symbols/internal/service"
@@ -26,7 +25,8 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, logConfig *conf.LogConfig, logLogger log.Logger) (*kratos.App, func(), error) {
+func wireApp(confServer *conf.Server, confData *conf.Data, logConfig *conf.LogConfig, metrics *conf.Metrics, logLogger log.Logger) (*kratos.App, func(), error) {
+	registry := server.NewMetricsRegistry(metrics)
 	db := data.NewDB(confData, logLogger)
 	dataData, cleanup, err := data.NewData(db, logLogger)
 	if err != nil {
@@ -37,11 +37,11 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logConfig *conf.LogCo
 	validate := biz.NewSymbolValidator()
 	watermillLogger := logger.NewWatermillLogger(logLogger)
 	publisher := data.NewAmqpPublisher(confData, logLogger, watermillLogger)
-	eventsPublisher := mq.NewEventPublisher(publisher, logLogger)
+	eventsPublisher := data.NewEventPublisherWithMetrics(publisher, metrics, registry, logLogger)
 	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, eventsPublisher, logLogger)
 	symbolService := service.NewSymbolService(symbolUseCase)
-	grpcServer := server.NewGRPCServer(confServer, symbolService, logLogger)
-	httpServer := server.NewHTTPServer(confServer, symbolService, logLogger)
+	grpcServer := server.NewGRPCServer(confServer, metrics, registry, symbolService, logLogger)
+	httpServer := server.NewHTTPServer(confServer, metrics, registry, symbolService, logLogger)
 	app := newApp(logLogger, grpcServer, httpServer)
 	return app, func() {
 		cleanup()

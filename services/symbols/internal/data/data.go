@@ -2,10 +2,13 @@ package data
 
 import (
 	"context"
+	"platform/events"
 	platform_logger "platform/logger"
+	"platform/metrics"
 	"symbols/internal/conf/gen"
 	"symbols/internal/data/common"
 	"symbols/internal/data/model"
+	"symbols/internal/data/mq"
 
 	"github.com/ThreeDotsLabs/watermill-amqp/v3/pkg/amqp"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -133,4 +136,22 @@ func (d *Data) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.D
 	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return fn(ctx, tx)
 	})
+}
+
+// NewEventPublisherWithMetrics wraps the base event publisher with metrics if enabled.
+func NewEventPublisherWithMetrics(pub message.Publisher, mc *conf.Metrics, reg *metrics.Registry, logger log.Logger) events.Publisher {
+	basePub := mq.NewEventPublisher(pub, logger)
+	if mc != nil && mc.Enabled && reg != nil {
+		return metrics.NewPublisherWithMetrics(basePub, reg)
+	}
+	return basePub
+}
+
+// NewEventSubscriberWithMetrics wraps the base event subscriber with metrics if enabled.
+func NewEventSubscriberWithMetrics(sub message.Subscriber, mc *conf.Metrics, reg *metrics.Registry, logger log.Logger) events.Subscriber {
+	baseSub := mq.NewEventSubscriber(sub, logger)
+	if mc != nil && mc.Enabled && reg != nil {
+		return metrics.NewSubscriberWithMetrics(baseSub, reg)
+	}
+	return baseSub
 }

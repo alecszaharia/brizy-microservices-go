@@ -32,6 +32,7 @@ type Bootstrap struct {
 	Server        *Server                `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
 	Data          *Data                  `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	Log           *LogConfig             `protobuf:"bytes,3,opt,name=log,proto3" json:"log,omitempty"`
+	Metrics       *Metrics               `protobuf:"bytes,4,opt,name=metrics,proto3" json:"metrics,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -83,6 +84,13 @@ func (x *Bootstrap) GetData() *Data {
 func (x *Bootstrap) GetLog() *LogConfig {
 	if x != nil {
 		return x.Log
+	}
+	return nil
+}
+
+func (x *Bootstrap) GetMetrics() *Metrics {
+	if x != nil {
+		return x.Metrics
 	}
 	return nil
 }
@@ -603,6 +611,74 @@ func (x *LogConfig) GetLevel() string {
 	return ""
 }
 
+type Metrics struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Enabled        bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                     // Enable/disable metrics export (default: true)
+	ServiceName    string                 `protobuf:"bytes,2,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`           // Service namespace for metrics (e.g., "symbols")
+	Path           string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`                                            // Endpoint path (default: "/metrics")
+	IncludeRuntime bool                   `protobuf:"varint,4,opt,name=include_runtime,json=includeRuntime,proto3" json:"include_runtime,omitempty"` // Include Go runtime metrics (default: true)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *Metrics) Reset() {
+	*x = Metrics{}
+	mi := &file_conf_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Metrics) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Metrics) ProtoMessage() {}
+
+func (x *Metrics) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Metrics.ProtoReflect.Descriptor instead.
+func (*Metrics) Descriptor() ([]byte, []int) {
+	return file_conf_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Metrics) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *Metrics) GetServiceName() string {
+	if x != nil {
+		return x.ServiceName
+	}
+	return ""
+}
+
+func (x *Metrics) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *Metrics) GetIncludeRuntime() bool {
+	if x != nil {
+		return x.IncludeRuntime
+	}
+	return false
+}
+
 // 2. Publishing Configuration (Producers)
 type RabbitMQServer_Exchange struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -616,7 +692,7 @@ type RabbitMQServer_Exchange struct {
 
 func (x *RabbitMQServer_Exchange) Reset() {
 	*x = RabbitMQServer_Exchange{}
-	mi := &file_conf_proto_msgTypes[9]
+	mi := &file_conf_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -628,7 +704,7 @@ func (x *RabbitMQServer_Exchange) String() string {
 func (*RabbitMQServer_Exchange) ProtoMessage() {}
 
 func (x *RabbitMQServer_Exchange) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_proto_msgTypes[9]
+	mi := &file_conf_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -688,7 +764,7 @@ type RabbitMQServer_Queue struct {
 
 func (x *RabbitMQServer_Queue) Reset() {
 	*x = RabbitMQServer_Queue{}
-	mi := &file_conf_proto_msgTypes[10]
+	mi := &file_conf_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -700,7 +776,7 @@ func (x *RabbitMQServer_Queue) String() string {
 func (*RabbitMQServer_Queue) ProtoMessage() {}
 
 func (x *RabbitMQServer_Queue) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_proto_msgTypes[10]
+	mi := &file_conf_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -770,11 +846,12 @@ var File_conf_proto protoreflect.FileDescriptor
 const file_conf_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"conf.proto\x12\x10symbols.api.conf\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x17validate/validate.proto\"\x98\x01\n" +
+	"conf.proto\x12\x10symbols.api.conf\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x17validate/validate.proto\"\xcd\x01\n" +
 	"\tBootstrap\x120\n" +
 	"\x06server\x18\x01 \x01(\v2\x18.symbols.api.conf.ServerR\x06server\x12*\n" +
 	"\x04data\x18\x02 \x01(\v2\x16.symbols.api.conf.DataR\x04data\x12-\n" +
-	"\x03log\x18\x03 \x01(\v2\x1b.symbols.api.conf.LogConfigR\x03log\"l\n" +
+	"\x03log\x18\x03 \x01(\v2\x1b.symbols.api.conf.LogConfigR\x03log\x123\n" +
+	"\ametrics\x18\x04 \x01(\v2\x19.symbols.api.conf.MetricsR\ametrics\"l\n" +
 	"\x06Server\x120\n" +
 	"\x04http\x18\x01 \x01(\v2\x1c.symbols.api.conf.HTTPServerR\x04http\x120\n" +
 	"\x04grpc\x18\x02 \x01(\v2\x1c.symbols.api.conf.GRPCServerR\x04grpc\"p\n" +
@@ -828,7 +905,12 @@ const file_conf_proto_rawDesc = "" +
 	"\x0eprefetch_count\x18\x06 \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\rprefetchCount\x12*\n" +
 	"\fworker_count\x18\a \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\vworkerCount\"B\n" +
 	"\tLogConfig\x125\n" +
-	"\x05level\x18\x02 \x01(\tB\x1f\xfaB\x1cr\x1aR\x05debugR\x04infoR\x04warnR\x05errorR\x05levelB\x9f\x01\n" +
+	"\x05level\x18\x02 \x01(\tB\x1f\xfaB\x1cr\x1aR\x05debugR\x04infoR\x04warnR\x05errorR\x05level\"\x83\x01\n" +
+	"\aMetrics\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12!\n" +
+	"\fservice_name\x18\x02 \x01(\tR\vserviceName\x12\x12\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x12'\n" +
+	"\x0finclude_runtime\x18\x04 \x01(\bR\x0eincludeRuntimeB\x9f\x01\n" +
 	"\x14com.symbols.api.confB\tConfProtoP\x01Z\x1asymbols/internal/conf;conf\xa2\x02\x03SAC\xaa\x02\x10Symbols.Api.Conf\xca\x02\x10Symbols\\Api\\Conf\xe2\x02\x1cSymbols\\Api\\Conf\\GPBMetadata\xea\x02\x12Symbols::Api::Confb\x06proto3"
 
 var (
@@ -843,7 +925,7 @@ func file_conf_proto_rawDescGZIP() []byte {
 	return file_conf_proto_rawDescData
 }
 
-var file_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_conf_proto_goTypes = []any{
 	(*Bootstrap)(nil),               // 0: symbols.api.conf.Bootstrap
 	(*Server)(nil),                  // 1: symbols.api.conf.Server
@@ -854,39 +936,41 @@ var file_conf_proto_goTypes = []any{
 	(*Database)(nil),                // 6: symbols.api.conf.Database
 	(*RabbitMQServer)(nil),          // 7: symbols.api.conf.RabbitMQServer
 	(*LogConfig)(nil),               // 8: symbols.api.conf.LogConfig
-	(*RabbitMQServer_Exchange)(nil), // 9: symbols.api.conf.RabbitMQServer.Exchange
-	(*RabbitMQServer_Queue)(nil),    // 10: symbols.api.conf.RabbitMQServer.Queue
-	(*wrapperspb.BoolValue)(nil),    // 11: google.protobuf.BoolValue
-	(*durationpb.Duration)(nil),     // 12: google.protobuf.Duration
+	(*Metrics)(nil),                 // 9: symbols.api.conf.Metrics
+	(*RabbitMQServer_Exchange)(nil), // 10: symbols.api.conf.RabbitMQServer.Exchange
+	(*RabbitMQServer_Queue)(nil),    // 11: symbols.api.conf.RabbitMQServer.Queue
+	(*wrapperspb.BoolValue)(nil),    // 12: google.protobuf.BoolValue
+	(*durationpb.Duration)(nil),     // 13: google.protobuf.Duration
 }
 var file_conf_proto_depIdxs = []int32{
 	1,  // 0: symbols.api.conf.Bootstrap.server:type_name -> symbols.api.conf.Server
 	2,  // 1: symbols.api.conf.Bootstrap.data:type_name -> symbols.api.conf.Data
 	8,  // 2: symbols.api.conf.Bootstrap.log:type_name -> symbols.api.conf.LogConfig
-	4,  // 3: symbols.api.conf.Server.http:type_name -> symbols.api.conf.HTTPServer
-	5,  // 4: symbols.api.conf.Server.grpc:type_name -> symbols.api.conf.GRPCServer
-	6,  // 5: symbols.api.conf.Data.database:type_name -> symbols.api.conf.Database
-	7,  // 6: symbols.api.conf.Data.mq:type_name -> symbols.api.conf.RabbitMQServer
-	11, // 7: symbols.api.conf.CORS.allow_credentials:type_name -> google.protobuf.BoolValue
-	12, // 8: symbols.api.conf.CORS.max_age:type_name -> google.protobuf.Duration
-	12, // 9: symbols.api.conf.HTTPServer.timeout:type_name -> google.protobuf.Duration
-	3,  // 10: symbols.api.conf.HTTPServer.cors:type_name -> symbols.api.conf.CORS
-	12, // 11: symbols.api.conf.GRPCServer.timeout:type_name -> google.protobuf.Duration
-	11, // 12: symbols.api.conf.Database.run_migrations:type_name -> google.protobuf.BoolValue
-	12, // 13: symbols.api.conf.Database.conn_max_lifetime:type_name -> google.protobuf.Duration
-	12, // 14: symbols.api.conf.RabbitMQServer.dial_timeout:type_name -> google.protobuf.Duration
-	9,  // 15: symbols.api.conf.RabbitMQServer.exchange:type_name -> symbols.api.conf.RabbitMQServer.Exchange
-	10, // 16: symbols.api.conf.RabbitMQServer.queue:type_name -> symbols.api.conf.RabbitMQServer.Queue
-	11, // 17: symbols.api.conf.RabbitMQServer.Exchange.durable:type_name -> google.protobuf.BoolValue
-	11, // 18: symbols.api.conf.RabbitMQServer.Exchange.auto_delete:type_name -> google.protobuf.BoolValue
-	11, // 19: symbols.api.conf.RabbitMQServer.Queue.durable:type_name -> google.protobuf.BoolValue
-	11, // 20: symbols.api.conf.RabbitMQServer.Queue.auto_delete:type_name -> google.protobuf.BoolValue
-	11, // 21: symbols.api.conf.RabbitMQServer.Queue.exclusive:type_name -> google.protobuf.BoolValue
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	9,  // 3: symbols.api.conf.Bootstrap.metrics:type_name -> symbols.api.conf.Metrics
+	4,  // 4: symbols.api.conf.Server.http:type_name -> symbols.api.conf.HTTPServer
+	5,  // 5: symbols.api.conf.Server.grpc:type_name -> symbols.api.conf.GRPCServer
+	6,  // 6: symbols.api.conf.Data.database:type_name -> symbols.api.conf.Database
+	7,  // 7: symbols.api.conf.Data.mq:type_name -> symbols.api.conf.RabbitMQServer
+	12, // 8: symbols.api.conf.CORS.allow_credentials:type_name -> google.protobuf.BoolValue
+	13, // 9: symbols.api.conf.CORS.max_age:type_name -> google.protobuf.Duration
+	13, // 10: symbols.api.conf.HTTPServer.timeout:type_name -> google.protobuf.Duration
+	3,  // 11: symbols.api.conf.HTTPServer.cors:type_name -> symbols.api.conf.CORS
+	13, // 12: symbols.api.conf.GRPCServer.timeout:type_name -> google.protobuf.Duration
+	12, // 13: symbols.api.conf.Database.run_migrations:type_name -> google.protobuf.BoolValue
+	13, // 14: symbols.api.conf.Database.conn_max_lifetime:type_name -> google.protobuf.Duration
+	13, // 15: symbols.api.conf.RabbitMQServer.dial_timeout:type_name -> google.protobuf.Duration
+	10, // 16: symbols.api.conf.RabbitMQServer.exchange:type_name -> symbols.api.conf.RabbitMQServer.Exchange
+	11, // 17: symbols.api.conf.RabbitMQServer.queue:type_name -> symbols.api.conf.RabbitMQServer.Queue
+	12, // 18: symbols.api.conf.RabbitMQServer.Exchange.durable:type_name -> google.protobuf.BoolValue
+	12, // 19: symbols.api.conf.RabbitMQServer.Exchange.auto_delete:type_name -> google.protobuf.BoolValue
+	12, // 20: symbols.api.conf.RabbitMQServer.Queue.durable:type_name -> google.protobuf.BoolValue
+	12, // 21: symbols.api.conf.RabbitMQServer.Queue.auto_delete:type_name -> google.protobuf.BoolValue
+	12, // 22: symbols.api.conf.RabbitMQServer.Queue.exclusive:type_name -> google.protobuf.BoolValue
+	23, // [23:23] is the sub-list for method output_type
+	23, // [23:23] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_conf_proto_init() }
@@ -900,7 +984,7 @@ func file_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_conf_proto_rawDesc), len(file_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

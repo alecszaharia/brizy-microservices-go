@@ -14,6 +14,7 @@ message Bootstrap {
   Server server = 1;
   Data data = 2;
   LogConfig log = 3;
+  Metrics metrics = 4;
 }
 
 message Server {
@@ -147,4 +148,11 @@ message LogConfig {
       "error"
     ]
   }];
+}
+
+message Metrics {
+  bool enabled = 1; // Enable/disable metrics export (default: true)
+  string service_name = 2; // Service namespace for metrics (e.g., "symbols")
+  string path = 3; // Endpoint path (default: "/metrics")
+  bool include_runtime = 4; // Include Go runtime metrics (default: true)
 }
