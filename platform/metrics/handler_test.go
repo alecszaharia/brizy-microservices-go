@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewMetricsHandler(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	handler := NewMetricsHandler(reg)
 
 	require.NotNil(t, handler)
@@ -50,7 +50,7 @@ func TestNewMetricsHandler(t *testing.T) {
 }
 
 func TestNewMetricsHandler_WithCustomMetrics(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 
 	// Add custom metrics
 	counter := reg.NewCounter("custom_counter_total", "Custom counter")
@@ -100,7 +100,7 @@ func TestNewMetricsHandler_NilRegistry(t *testing.T) {
 }
 
 func TestNewMetricsHandler_PrometheusFormat(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 
 	// Add a simple counter
 	counter := reg.NewCounterVec("requests_total", "Total requests", []string{"method"})
@@ -128,7 +128,7 @@ func TestNewMetricsHandler_PrometheusFormat(t *testing.T) {
 }
 
 func TestNewMetricsHandler_BuildInfo(t *testing.T) {
-	reg := NewRegistry("my_service")
+	reg := NewRegistry("my_service", "1.0.0")
 	handler := NewMetricsHandler(reg)
 
 	req := httptest.NewRequest("GET", "/metrics", nil)

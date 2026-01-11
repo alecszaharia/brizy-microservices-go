@@ -49,7 +49,7 @@ func (m *mockSubscriber) Unwrap() message.Subscriber {
 }
 
 func TestNewPublisherWithMetrics(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	basePub := &mockPublisher{}
 
 	pub := NewPublisherWithMetrics(basePub, reg)
@@ -67,7 +67,7 @@ func TestNewPublisherWithMetrics_NilRegistry(t *testing.T) {
 }
 
 func TestNewPublisherWithMetrics_NilPublisher(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 
 	pub := NewPublisherWithMetrics(nil, reg)
 
@@ -75,7 +75,7 @@ func TestNewPublisherWithMetrics_NilPublisher(t *testing.T) {
 }
 
 func TestPublisherWithMetrics_Publish_Success(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	basePub := &mockPublisher{}
 
 	basePub.On("Publish", mock.Anything, "test.topic", mock.Anything).Return(nil)
@@ -111,7 +111,7 @@ func TestPublisherWithMetrics_Publish_Success(t *testing.T) {
 }
 
 func TestPublisherWithMetrics_Publish_Error(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	basePub := &mockPublisher{}
 
 	publishErr := errors.New("publish failed")
@@ -146,7 +146,7 @@ func TestPublisherWithMetrics_Publish_Error(t *testing.T) {
 }
 
 func TestPublisherWithMetrics_MultipleTopics(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	basePub := &mockPublisher{}
 
 	basePub.On("Publish", mock.Anything, "topic.one", mock.Anything).Return(nil)
@@ -172,7 +172,7 @@ func TestPublisherWithMetrics_MultipleTopics(t *testing.T) {
 }
 
 func TestNewSubscriberWithMetrics(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	baseSub := &mockSubscriber{}
 
 	sub := NewSubscriberWithMetrics(baseSub, reg)
@@ -190,7 +190,7 @@ func TestNewSubscriberWithMetrics_NilRegistry(t *testing.T) {
 }
 
 func TestSubscriberWithMetrics_Subscribe_Success(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	baseSub := &mockSubscriber{}
 
 	// Create a channel with messages
@@ -239,7 +239,7 @@ func TestSubscriberWithMetrics_Subscribe_Success(t *testing.T) {
 }
 
 func TestSubscriberWithMetrics_Subscribe_Error(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	baseSub := &mockSubscriber{}
 
 	subscribeErr := errors.New("subscribe failed")
@@ -267,7 +267,7 @@ func TestSubscriberWithMetrics_Subscribe_Error(t *testing.T) {
 }
 
 func TestSubscriberWithMetrics_Nack(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	baseSub := &mockSubscriber{}
 
 	msgCh := make(chan *message.Message, 1)
@@ -304,7 +304,7 @@ func TestSubscriberWithMetrics_Nack(t *testing.T) {
 }
 
 func TestSubscriberWithMetrics_Close(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	baseSub := &mockSubscriber{}
 
 	baseSub.On("Close").Return(nil)
@@ -318,7 +318,7 @@ func TestSubscriberWithMetrics_Close(t *testing.T) {
 }
 
 func TestSubscriberWithMetrics_Close_Error(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	baseSub := &mockSubscriber{}
 
 	closeErr := errors.New("close failed")
@@ -337,7 +337,7 @@ func TestPublisherWithMetrics_Unwrap(t *testing.T) {
 	basePub := &mockPublisher{}
 	basePub.On("Unwrap").Return(nil)
 
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	pub := NewPublisherWithMetrics(basePub, reg).(*publisherWithMetrics)
 
 	unwrapped := pub.Unwrap()
@@ -348,7 +348,7 @@ func TestSubscriberWithMetrics_Unwrap(t *testing.T) {
 	baseSub := &mockSubscriber{}
 	baseSub.On("Unwrap").Return(nil)
 
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	sub := NewSubscriberWithMetrics(baseSub, reg).(*subscriberWithMetrics)
 
 	unwrapped := sub.Unwrap()

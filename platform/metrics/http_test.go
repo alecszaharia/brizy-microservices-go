@@ -82,7 +82,7 @@ func (h *mockHeader) Add(key, value string) {
 }
 
 func TestHTTPMiddleware(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := HTTPMiddleware(reg)
 
 	require.NotNil(t, mw)
@@ -165,7 +165,7 @@ func TestHTTPMiddleware_RoutePattern(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a new registry for each test to avoid conflicts
-			reg := NewRegistry("test_service_" + tt.name)
+			reg := NewRegistry("test_service_"+tt.name, "1.0.0")
 			mw := HTTPMiddleware(reg)
 
 			httpReq, _ := http.NewRequest("GET", "/api/users/123", nil)
@@ -205,7 +205,7 @@ func TestHTTPMiddleware_RoutePattern(t *testing.T) {
 }
 
 func TestHTTPMiddleware_Methods(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := HTTPMiddleware(reg)
 
 	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH"}
@@ -242,7 +242,7 @@ func TestHTTPMiddleware_Methods(t *testing.T) {
 }
 
 func TestHTTPMiddleware_ErrorStatus(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := HTTPMiddleware(reg)
 
 	httpReq, _ := http.NewRequest("GET", "/api/error", nil)
@@ -296,7 +296,7 @@ func TestHTTPMiddleware_NilRegistry(t *testing.T) {
 }
 
 func TestHTTPMiddleware_NoTransport(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := HTTPMiddleware(reg)
 
 	// Context without transport
@@ -323,7 +323,7 @@ func TestHTTPMiddleware_NoTransport(t *testing.T) {
 }
 
 func TestHTTPMiddleware_DurationRecording(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := HTTPMiddleware(reg)
 
 	httpReq, _ := http.NewRequest("GET", "/api/slow", nil)

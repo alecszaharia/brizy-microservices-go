@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewRegistry(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 
 	require.NotNil(t, reg)
 	assert.NotNil(t, reg.registry)
@@ -35,7 +35,7 @@ func TestNewRegistry(t *testing.T) {
 }
 
 func TestRegistry_NewCounterVec(t *testing.T) {
-	reg := NewRegistry("my_service")
+	reg := NewRegistry("my_service", "1.0.0")
 
 	counter := reg.NewCounterVec("requests_total", "Total requests", []string{"method", "status"})
 	require.NotNil(t, counter)
@@ -61,7 +61,7 @@ func TestRegistry_NewCounterVec(t *testing.T) {
 }
 
 func TestRegistry_NewGaugeVec(t *testing.T) {
-	reg := NewRegistry("my_service")
+	reg := NewRegistry("my_service", "1.0.0")
 
 	gauge := reg.NewGaugeVec("queue_depth", "Current queue depth", []string{"queue"})
 	require.NotNil(t, gauge)
@@ -87,7 +87,7 @@ func TestRegistry_NewGaugeVec(t *testing.T) {
 }
 
 func TestRegistry_NewHistogramVec(t *testing.T) {
-	reg := NewRegistry("my_service")
+	reg := NewRegistry("my_service", "1.0.0")
 
 	buckets := []float64{0.1, 0.5, 1.0}
 	histogram := reg.NewHistogramVec("request_duration_seconds", "Request duration", buckets, []string{"endpoint"})
@@ -114,7 +114,7 @@ func TestRegistry_NewHistogramVec(t *testing.T) {
 }
 
 func TestRegistry_NewCounter(t *testing.T) {
-	reg := NewRegistry("my_service")
+	reg := NewRegistry("my_service", "1.0.0")
 
 	counter := reg.NewCounter("operations_total", "Total operations")
 	require.NotNil(t, counter)
@@ -141,7 +141,7 @@ func TestRegistry_NewCounter(t *testing.T) {
 }
 
 func TestRegistry_NewGauge(t *testing.T) {
-	reg := NewRegistry("my_service")
+	reg := NewRegistry("my_service", "1.0.0")
 
 	gauge := reg.NewGauge("temperature", "Current temperature")
 	require.NotNil(t, gauge)
@@ -168,8 +168,8 @@ func TestRegistry_NewGauge(t *testing.T) {
 
 func TestRegistry_MultipleRegistries_Isolated(t *testing.T) {
 	// Create two registries for different services
-	reg1 := NewRegistry("service_one")
-	reg2 := NewRegistry("service_two")
+	reg1 := NewRegistry("service_one", "1.0.0")
+	reg2 := NewRegistry("service_two", "1.0.0")
 
 	// Register same metric name in both
 	counter1 := reg1.NewCounter("requests_total", "Service one requests")
@@ -204,7 +204,7 @@ func TestRegistry_MultipleRegistries_Isolated(t *testing.T) {
 }
 
 func TestRegistry_DuplicateMetric_Panics(t *testing.T) {
-	reg := NewRegistry("my_service")
+	reg := NewRegistry("my_service", "1.0.0")
 
 	// First registration should succeed
 	reg.NewCounter("requests_total", "Total requests")
@@ -216,7 +216,7 @@ func TestRegistry_DuplicateMetric_Panics(t *testing.T) {
 }
 
 func TestRegistry_PrependServiceName(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 
 	tests := []struct {
 		name     string
@@ -247,7 +247,7 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestRegistry_Unwrap(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 
 	promReg := reg.Unwrap()
 	require.NotNil(t, promReg)

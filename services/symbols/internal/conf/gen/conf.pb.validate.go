@@ -1700,13 +1700,67 @@ func (m *Metrics) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for Enabled
+	if all {
+		switch v := interface{}(m.GetEnabled()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, MetricsValidationError{
+					field:  "Enabled",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, MetricsValidationError{
+					field:  "Enabled",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetEnabled()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return MetricsValidationError{
+				field:  "Enabled",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
 
 	// no validation rules for ServiceName
 
 	// no validation rules for Path
 
-	// no validation rules for IncludeRuntime
+	if all {
+		switch v := interface{}(m.GetIncludeRuntime()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, MetricsValidationError{
+					field:  "IncludeRuntime",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, MetricsValidationError{
+					field:  "IncludeRuntime",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetIncludeRuntime()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return MetricsValidationError{
+				field:  "IncludeRuntime",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
 
 	if len(errors) > 0 {
 		return MetricsMultiError(errors)

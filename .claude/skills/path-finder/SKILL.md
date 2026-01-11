@@ -2,8 +2,8 @@
 skill_name: path-finder
 description: Provides correct file paths for brizy-go-services monorepo based on Clean Architecture conventions and workspace structure. Use when you need to reference or locate files in the codebase.
 tags: [paths, file-structure, clean-architecture, monorepo, workspace]
-version: 1.0.0
-last_updated: 2025-12-28
+version: 1.0.1
+last_updated: 2026-01-11
 ---
 
 # Path Finder Skill
@@ -28,6 +28,8 @@ brizy-go-services/
 │               └── {service}.swagger.json
 ├── platform/                        # Shared utilities module
 │   ├── go.mod
+│   ├── events/                      # Pub/sub interfaces
+│   ├── logger/                      # Watermill logger
 │   ├── middleware/
 │   ├── pagination/
 │   └── adapters/
@@ -36,7 +38,11 @@ brizy-go-services/
         ├── go.mod
         ├── Makefile
         ├── cmd/
-        │   └── {service}/
+        │   ├── {service}/           # Main service
+        │   │   ├── main.go
+        │   │   ├── wire.go
+        │   │   └── wire_gen.go
+        │   └── {service}-worker/    # Optional: Event worker
         │       ├── main.go
         │       ├── wire.go
         │       └── wire_gen.go
@@ -53,8 +59,16 @@ brizy-go-services/
         │   │   ├── repo/
         │   │   │   ├── {entity}.go
         │   │   │   └── {entity}_test.go
+        │   │   ├── mq/              # Optional: Pub/sub wrappers
+        │   │   │   ├── publisher.go
+        │   │   │   └── subscriber.go
         │   │   └── common/
         │   │       └── transaction.go
+        │   ├── handlers/            # Optional: Event handlers
+        │   │   ├── provider.go
+        │   │   └── {event}_handler.go
+        │   ├── worker/              # Optional: Worker setup
+        │   │   └── worker.go
         │   ├── service/             # Service layer (handlers)
         │   │   ├── service.go
         │   │   ├── {entity}.go
@@ -105,6 +119,7 @@ type SymbolUseCase interface {
 **Subdirectories**:
 - \`model/\` - GORM entities (database models)
 - \`repo/\` - Repository implementations
+- \`mq/\` - Message queue publisher/subscriber wrappers (optional)
 - \`common/\` - Shared data layer utilities
 
 **File Patterns**:
@@ -112,11 +127,14 @@ type SymbolUseCase interface {
 - \`model/{entity}.go\` - GORM entity definition
 - \`repo/{entity}.go\` - Repository implementation
 - \`repo/{entity}_test.go\` - Repository tests
+- \`mq/publisher.go\` - Event publisher wrapper (optional)
+- \`mq/subscriber.go\` - Event subscriber wrapper (optional)
 - \`common/transaction.go\` - Transaction utilities
 
 **Import Paths**:
 - GORM models: \`{service}/internal/data/model\`
 - Repositories: \`{service}/internal/data/repo\`
+- Pub/sub wrappers: \`{service}/internal/data/mq\`
 - Common utilities: \`{service}/internal/data/common\`
 
 **Example**:
@@ -165,6 +183,56 @@ import (
 
 **Import Path**: \`{service}/internal/server\`
 
+### Event Handlers Layer (handlers) - Optional
+
+**Location**: \`services/{service}/internal/handlers/\`
+
+**File Patterns**:
+- \`provider.go\` - Wire ProviderSet
+- \`{event}_handler.go\` - Event handler implementations
+- \`{event}_handler_test.go\` - Handler tests (optional)
+
+**Import Path**: \`{service}/internal/handlers\`
+
+**Example**:
+```go
+// services/symbols/internal/handlers/lifecycle.go
+package handlers
+
+import (
+    "{service}/internal/biz"
+    "github.com/ThreeDotsLabs/watermill/message"
+)
+
+type LifecycleEventHandler struct {
+    logger   *log.Helper
+    symbolUC biz.SymbolUseCase
+}
+```
+
+### Worker Layer (worker) - Optional
+
+**Location**: \`services/{service}/internal/worker/\`
+
+**File Patterns**:
+- \`worker.go\` - Worker lifecycle management (Start/Stop)
+- \`provider.go\` - Wire ProviderSet (optional)
+
+**Import Path**: \`{service}/internal/worker\`
+
+**Example**:
+```go
+// services/symbols/internal/worker/worker.go
+package worker
+
+import (
+    "github.com/ThreeDotsLabs/watermill/message"
+)
+
+func NewWorker(router *message.Router, logger log.Logger) Worker
+func NewRouter(cfg *conf.Data, handlers..., logger) *message.Router
+```
+
 ### Configuration
 
 **Location**: \`services/{service}/internal/conf/\`
@@ -198,14 +266,18 @@ import v1 "contracts/gen/symbols/v1"
 **Location**: \`platform/{package}/\`
 
 **Packages**:
-- \`platform/middleware\` - Request ID middleware
-- \`platform/pagination\` - Pagination utilities
-- \`platform/adapters\` - Common adapters
+- \`platform/events\` - Publisher/Subscriber interfaces for event-driven architecture
+- \`platform/logger\` - Structured logging with Watermill integration
+- \`platform/middleware\` - Request ID middleware with context propagation
+- \`platform/pagination\` - Offset-based pagination utilities
+- \`platform/adapters\` - Common adapters (transformers, validators)
 
 **Import Examples**:
 ```go
-import "platform/pagination"
+import "platform/events"
+import "platform/logger"
 import "platform/middleware"
+import "platform/pagination"
 ```
 
 ## Path Resolution Rules

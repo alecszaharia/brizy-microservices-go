@@ -57,7 +57,7 @@ data:
       prefetch_count: ${MQ_QUEUE_PREFETCH_COUNT:10}
       worker_count: ${MQ_QUEUE_WORKER_COUNT:5}
 metrics:
-  enabled: ${METRICS_ENABLED:true}
+  enabled: true
   service_name: ${METRICS_SERVICE_NAME:symbols}
   path: ${METRICS_PATH:/metrics}
-  include_runtime: ${METRICS_INCLUDE_RUNTIME:true}
+  include_runtime: true

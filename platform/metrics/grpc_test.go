@@ -39,7 +39,7 @@ func (m *mockGRPCTransporter) ReplyHeader() transport.Header {
 }
 
 func TestGRPCMiddleware(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := GRPCMiddleware(reg)
 
 	require.NotNil(t, mw)
@@ -119,7 +119,7 @@ func TestGRPCMiddleware_StatusCodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := NewRegistry("test_service")
+			reg := NewRegistry("test_service", "1.0.0")
 			mw := GRPCMiddleware(reg)
 
 			tr := &mockGRPCTransporter{
@@ -226,7 +226,7 @@ func TestGRPCMiddleware_NilRegistry(t *testing.T) {
 }
 
 func TestGRPCMiddleware_NoTransport(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := GRPCMiddleware(reg)
 
 	ctx := context.Background()
@@ -252,7 +252,7 @@ func TestGRPCMiddleware_NoTransport(t *testing.T) {
 }
 
 func TestGRPCMiddleware_DurationRecording(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := GRPCMiddleware(reg)
 
 	tr := &mockGRPCTransporter{
@@ -283,7 +283,7 @@ func TestGRPCMiddleware_DurationRecording(t *testing.T) {
 }
 
 func TestGRPCMiddleware_MultipleRequests(t *testing.T) {
-	reg := NewRegistry("test_service")
+	reg := NewRegistry("test_service", "1.0.0")
 	mw := GRPCMiddleware(reg)
 
 	operations := []string{

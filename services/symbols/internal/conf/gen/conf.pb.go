@@ -613,10 +613,10 @@ func (x *LogConfig) GetLevel() string {
 
 type Metrics struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	Enabled        bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                     // Enable/disable metrics export (default: true)
-	ServiceName    string                 `protobuf:"bytes,2,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`           // Service namespace for metrics (e.g., "symbols")
-	Path           string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`                                            // Endpoint path (default: "/metrics")
-	IncludeRuntime bool                   `protobuf:"varint,4,opt,name=include_runtime,json=includeRuntime,proto3" json:"include_runtime,omitempty"` // Include Go runtime metrics (default: true)
+	Enabled        *wrapperspb.BoolValue  `protobuf:"bytes,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                     // Enable/disable metrics export (default: true)
+	ServiceName    string                 `protobuf:"bytes,2,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`          // Service namespace for metrics (e.g., "symbols")
+	Path           string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`                                           // Endpoint path (default: "/metrics")
+	IncludeRuntime *wrapperspb.BoolValue  `protobuf:"bytes,4,opt,name=include_runtime,json=includeRuntime,proto3" json:"include_runtime,omitempty"` // Include Go runtime metrics (default: true)
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -651,11 +651,11 @@ func (*Metrics) Descriptor() ([]byte, []int) {
 	return file_conf_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *Metrics) GetEnabled() bool {
+func (x *Metrics) GetEnabled() *wrapperspb.BoolValue {
 	if x != nil {
 		return x.Enabled
 	}
-	return false
+	return nil
 }
 
 func (x *Metrics) GetServiceName() string {
@@ -672,11 +672,11 @@ func (x *Metrics) GetPath() string {
 	return ""
 }
 
-func (x *Metrics) GetIncludeRuntime() bool {
+func (x *Metrics) GetIncludeRuntime() *wrapperspb.BoolValue {
 	if x != nil {
 		return x.IncludeRuntime
 	}
-	return false
+	return nil
 }
 
 // 2. Publishing Configuration (Producers)
@@ -905,12 +905,12 @@ const file_conf_proto_rawDesc = "" +
 	"\x0eprefetch_count\x18\x06 \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\rprefetchCount\x12*\n" +
 	"\fworker_count\x18\a \x01(\x05B\a\xfaB\x04\x1a\x02 \x00R\vworkerCount\"B\n" +
 	"\tLogConfig\x125\n" +
-	"\x05level\x18\x02 \x01(\tB\x1f\xfaB\x1cr\x1aR\x05debugR\x04infoR\x04warnR\x05errorR\x05level\"\x83\x01\n" +
-	"\aMetrics\x12\x18\n" +
-	"\aenabled\x18\x01 \x01(\bR\aenabled\x12!\n" +
+	"\x05level\x18\x02 \x01(\tB\x1f\xfaB\x1cr\x1aR\x05debugR\x04infoR\x04warnR\x05errorR\x05level\"\xbb\x01\n" +
+	"\aMetrics\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12!\n" +
 	"\fservice_name\x18\x02 \x01(\tR\vserviceName\x12\x12\n" +
-	"\x04path\x18\x03 \x01(\tR\x04path\x12'\n" +
-	"\x0finclude_runtime\x18\x04 \x01(\bR\x0eincludeRuntimeB\x9f\x01\n" +
+	"\x04path\x18\x03 \x01(\tR\x04path\x12C\n" +
+	"\x0finclude_runtime\x18\x04 \x01(\v2\x1a.google.protobuf.BoolValueR\x0eincludeRuntimeB\x9f\x01\n" +
 	"\x14com.symbols.api.confB\tConfProtoP\x01Z\x1asymbols/internal/conf;conf\xa2\x02\x03SAC\xaa\x02\x10Symbols.Api.Conf\xca\x02\x10Symbols\\Api\\Conf\xe2\x02\x1cSymbols\\Api\\Conf\\GPBMetadata\xea\x02\x12Symbols::Api::Confb\x06proto3"
 
 var (
@@ -961,16 +961,18 @@ var file_conf_proto_depIdxs = []int32{
 	13, // 15: symbols.api.conf.RabbitMQServer.dial_timeout:type_name -> google.protobuf.Duration
 	10, // 16: symbols.api.conf.RabbitMQServer.exchange:type_name -> symbols.api.conf.RabbitMQServer.Exchange
 	11, // 17: symbols.api.conf.RabbitMQServer.queue:type_name -> symbols.api.conf.RabbitMQServer.Queue
-	12, // 18: symbols.api.conf.RabbitMQServer.Exchange.durable:type_name -> google.protobuf.BoolValue
-	12, // 19: symbols.api.conf.RabbitMQServer.Exchange.auto_delete:type_name -> google.protobuf.BoolValue
-	12, // 20: symbols.api.conf.RabbitMQServer.Queue.durable:type_name -> google.protobuf.BoolValue
-	12, // 21: symbols.api.conf.RabbitMQServer.Queue.auto_delete:type_name -> google.protobuf.BoolValue
-	12, // 22: symbols.api.conf.RabbitMQServer.Queue.exclusive:type_name -> google.protobuf.BoolValue
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	12, // 18: symbols.api.conf.Metrics.enabled:type_name -> google.protobuf.BoolValue
+	12, // 19: symbols.api.conf.Metrics.include_runtime:type_name -> google.protobuf.BoolValue
+	12, // 20: symbols.api.conf.RabbitMQServer.Exchange.durable:type_name -> google.protobuf.BoolValue
+	12, // 21: symbols.api.conf.RabbitMQServer.Exchange.auto_delete:type_name -> google.protobuf.BoolValue
+	12, // 22: symbols.api.conf.RabbitMQServer.Queue.durable:type_name -> google.protobuf.BoolValue
+	12, // 23: symbols.api.conf.RabbitMQServer.Queue.auto_delete:type_name -> google.protobuf.BoolValue
+	12, // 24: symbols.api.conf.RabbitMQServer.Queue.exclusive:type_name -> google.protobuf.BoolValue
+	25, // [25:25] is the sub-list for method output_type
+	25, // [25:25] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_conf_proto_init() }

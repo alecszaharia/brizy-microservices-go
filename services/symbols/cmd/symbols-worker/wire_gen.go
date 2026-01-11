@@ -9,13 +9,14 @@ package main
 import (
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
+	"platform/build"
 	"platform/logger"
-	"platform/metrics"
 	"symbols/internal/biz"
 	"symbols/internal/conf/gen"
 	"symbols/internal/data"
 	"symbols/internal/data/repo"
 	"symbols/internal/handlers"
+	"symbols/internal/server"
 	"symbols/internal/worker"
 )
 
@@ -26,7 +27,7 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(server *conf.Server, confData *conf.Data, logConfig *conf.LogConfig, metrics *conf.Metrics, logLogger log.Logger) (*kratos.App, func(), error) {
+func wireApp(serviceBuildInfo *build.ServiceBuildInfo, confServer *conf.Server, confData *conf.Data, logConfig *conf.LogConfig, metrics *conf.Metrics, logLogger log.Logger) (*kratos.App, func(), error) {
 	db := data.NewDB(confData, logLogger)
 	dataData, cleanup, err := data.NewData(db, logLogger)
 	if err != nil {
@@ -37,7 +38,7 @@ func wireApp(server *conf.Server, confData *conf.Data, logConfig *conf.LogConfig
 	validate := biz.NewSymbolValidator()
 	watermillLogger := logger.NewWatermillLogger(logLogger)
 	publisher := data.NewAmqpPublisher(confData, logLogger, watermillLogger)
-	registry := NewWorkerMetricsRegistry(metrics)
+	registry := server.NewMetricsRegistry(metrics, serviceBuildInfo)
 	eventsPublisher := data.NewEventPublisherWithMetrics(publisher, metrics, registry, logLogger)
 	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, eventsPublisher, logLogger)
 	lifecycleEventHandler := handlers.NewLifecycleEventHandler(symbolUseCase, logLogger)
@@ -49,12 +50,4 @@ func wireApp(server *conf.Server, confData *conf.Data, logConfig *conf.LogConfig
 	return app, func() {
 		cleanup()
 	}, nil
-}
-
-// wire.go:
-
-// NewWorkerMetricsRegistry creates a metrics registry for the worker (returns nil for MVP).
-func NewWorkerMetricsRegistry(mc *conf.Metrics) *metrics.Registry {
-
-	return nil
 }

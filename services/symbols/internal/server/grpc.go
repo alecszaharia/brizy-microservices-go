@@ -26,7 +26,7 @@ func NewGRPCServer(c *conf.Server, mc *conf.Metrics, reg *metrics.Registry, symb
 	}
 
 	// Add metrics middleware if enabled
-	if mc != nil && mc.Enabled && reg != nil {
+	if mc != nil && mc.Enabled.Value && reg != nil {
 		middlewares = append(middlewares, metrics.GRPCMiddleware(reg))
 	}
 

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"platform/build"
 	p "platform/logger"
 	"symbols/internal/conf/gen"
 
@@ -33,6 +34,7 @@ func init() {
 }
 
 func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
+
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
@@ -45,6 +47,8 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 		),
 	)
 }
+
+var buildInfo = build.NewBuildInfo(Name, Version)
 
 func main() {
 	flag.Parse()
@@ -73,7 +77,7 @@ func main() {
 
 	logger := p.NewLogger(bc.Log.Level, id, Name, Version)
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Log, bc.Metrics, logger)
+	app, cleanup, err := wireApp(buildInfo, bc.Server, bc.Data, bc.Log, bc.Metrics, logger)
 	if err != nil {
 		panic(err)
 	}

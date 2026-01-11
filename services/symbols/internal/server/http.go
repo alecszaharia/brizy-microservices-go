@@ -26,7 +26,7 @@ func NewHTTPServer(c *conf.Server, mc *conf.Metrics, reg *metrics.Registry, symb
 	}
 
 	// Add metrics middleware if enabled
-	if mc != nil && mc.Enabled && reg != nil {
+	if mc != nil && mc.Enabled.Value && reg != nil {
 		middlewares = append(middlewares, metrics.HTTPMiddleware(reg))
 	}
 
@@ -58,7 +58,7 @@ func NewHTTPServer(c *conf.Server, mc *conf.Metrics, reg *metrics.Registry, symb
 	srv := http.NewServer(opts...)
 
 	// Register metrics endpoint if enabled
-	if mc != nil && mc.Enabled && reg != nil {
+	if mc != nil && mc.Enabled.Value && reg != nil {
 		metricsPath := mc.Path
 		if metricsPath == "" {
 			metricsPath = "/metrics"

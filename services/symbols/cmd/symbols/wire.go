@@ -8,6 +8,7 @@ package main
 //go:generate go run github.com/google/wire/cmd/wire
 
 import (
+	platform_build_info "platform/build"
 	platform_logger "platform/logger"
 	"symbols/internal/biz"
 	"symbols/internal/conf/gen"
@@ -21,6 +22,6 @@ import (
 )
 
 // wireApp init kratos application.
-func wireApp(*conf.Server, *conf.Data, *conf.LogConfig, *conf.Metrics, log.Logger) (*kratos.App, func(), error) {
+func wireApp(*platform_build_info.ServiceBuildInfo, *conf.Server, *conf.Data, *conf.LogConfig, *conf.Metrics, log.Logger) (*kratos.App, func(), error) {
 	panic(wire.Build(platform_logger.ProviderSet, server.ProviderSet, data.ProviderSet, biz.ProviderSet, service.ProviderSet, newApp))
 }

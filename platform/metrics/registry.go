@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"platform/build"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 )
@@ -13,20 +15,22 @@ type Registry struct {
 
 // NewRegistry creates a new metrics registry for the given service.
 // It automatically registers Go runtime collectors and build info.
-func NewRegistry(serviceName string) *Registry {
+func NewRegistry(info *build.ServiceBuildInfo) *Registry {
 	reg := prometheus.NewRegistry()
 
 	// Register Go runtime collectors
 	reg.MustRegister(collectors.NewGoCollector())
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	// Register build info
-	registerBuildInfo(reg, serviceName)
-
-	return &Registry{
+	r := &Registry{
 		registry:    reg,
-		serviceName: serviceName,
+		serviceName: info.ServiceName,
 	}
+
+	// Register build info
+	r.NewGaugeVec("build_info", "Build information", []string{"version"}).WithLabelValues(info.Version).Set(1)
+
+	return r
 }
 
 // Unwrap returns the underlying Prometheus registry for direct access.

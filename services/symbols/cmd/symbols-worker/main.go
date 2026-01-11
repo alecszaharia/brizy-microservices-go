@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"platform/build"
 	p "platform/logger"
 	"symbols/internal/conf/gen"
 	"symbols/internal/worker"
@@ -30,6 +31,8 @@ var (
 func init() {
 	flag.StringVar(&configFile, "conf", "configs/config.yaml", "config path, eg: --conf config.yaml")
 }
+
+var buildInfo = build.NewBuildInfo(Name, Version)
 
 func newApp(worker worker.Worker, logger log.Logger) *kratos.App {
 	return kratos.New(
@@ -70,7 +73,7 @@ func main() {
 
 	logger := p.NewLogger(bc.Log.Level, id, Name, Version)
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Log, bc.Metrics, logger)
+	app, cleanup, err := wireApp(buildInfo, bc.Server, bc.Data, bc.Log, bc.Metrics, logger)
 	if err != nil {
 		panic(err)
 	}

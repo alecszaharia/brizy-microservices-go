@@ -141,7 +141,7 @@ func (d *Data) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.D
 // NewEventPublisherWithMetrics wraps the base event publisher with metrics if enabled.
 func NewEventPublisherWithMetrics(pub message.Publisher, mc *conf.Metrics, reg *metrics.Registry, logger log.Logger) events.Publisher {
 	basePub := mq.NewEventPublisher(pub, logger)
-	if mc != nil && mc.Enabled && reg != nil {
+	if mc != nil && mc.Enabled.Value && reg != nil {
 		return metrics.NewPublisherWithMetrics(basePub, reg)
 	}
 	return basePub
@@ -150,7 +150,8 @@ func NewEventPublisherWithMetrics(pub message.Publisher, mc *conf.Metrics, reg *
 // NewEventSubscriberWithMetrics wraps the base event subscriber with metrics if enabled.
 func NewEventSubscriberWithMetrics(sub message.Subscriber, mc *conf.Metrics, reg *metrics.Registry, logger log.Logger) events.Subscriber {
 	baseSub := mq.NewEventSubscriber(sub, logger)
-	if mc != nil && mc.Enabled && reg != nil {
+	if mc != nil && mc.Enabled.Value && reg != nil {
+
 		return metrics.NewSubscriberWithMetrics(baseSub, reg)
 	}
 	return baseSub

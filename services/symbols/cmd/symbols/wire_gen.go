@@ -9,6 +9,7 @@ package main
 import (
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
+	"platform/build"
 	"platform/logger"
 	"symbols/internal/biz"
 	"symbols/internal/conf/gen"
@@ -25,8 +26,8 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, logConfig *conf.LogConfig, metrics *conf.Metrics, logLogger log.Logger) (*kratos.App, func(), error) {
-	registry := server.NewMetricsRegistry(metrics)
+func wireApp(serviceBuildInfo *build.ServiceBuildInfo, confServer *conf.Server, confData *conf.Data, logConfig *conf.LogConfig, metrics *conf.Metrics, logLogger log.Logger) (*kratos.App, func(), error) {
+	registry := server.NewMetricsRegistry(metrics, serviceBuildInfo)
 	db := data.NewDB(confData, logLogger)
 	dataData, cleanup, err := data.NewData(db, logLogger)
 	if err != nil {
