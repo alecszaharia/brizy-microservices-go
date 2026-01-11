@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-kratos/kratos/contrib/middleware/validate/v2"
 	"github.com/go-kratos/kratos/v2/log"
-	kratos_middleware "github.com/go-kratos/kratos/v2/middleware"
+	kratosmiddleware "github.com/go-kratos/kratos/v2/middleware"
 	"github.com/go-kratos/kratos/v2/middleware/logging"
 	"github.com/go-kratos/kratos/v2/middleware/ratelimit"
 	"github.com/go-kratos/kratos/v2/middleware/recovery"
@@ -19,7 +19,7 @@ import (
 
 func NewHTTPServer(c *conf.Server, mc *conf.Metrics, reg *metrics.Registry, symbolService *service.SymbolService, logger log.Logger) *http.Server {
 	// Build middleware chain
-	middlewares := []kratos_middleware.Middleware{
+	middlewares := []kratosmiddleware.Middleware{
 		recovery.Recovery(),
 		ratelimit.Server(),
 		middleware.RequestIDMiddleware(logger),

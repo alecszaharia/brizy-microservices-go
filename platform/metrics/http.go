@@ -40,7 +40,7 @@ func HTTPMiddleware(registry *Registry) middleware.Middleware {
 	)
 
 	return func(handler middleware.Handler) middleware.Handler {
-		return func(ctx context.Context, req interface{}) (interface{}, error) {
+		return func(ctx context.Context, req any) (any, error) {
 			startTime := time.Now()
 
 			// Get transport info
