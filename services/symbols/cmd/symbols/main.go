@@ -48,7 +48,6 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 
 func main() {
 	flag.Parse()
-	logger := p.NewLogger(id, Name, Version)
 
 	c := config.New(
 		config.WithSource(
@@ -72,7 +71,9 @@ func main() {
 		panic(err)
 	}
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, logger)
+	logger := p.NewLogger(bc.Log.Level, id, Name, Version)
+
+	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Log, logger)
 	if err != nil {
 		panic(err)
 	}

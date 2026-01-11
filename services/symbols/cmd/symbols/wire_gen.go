@@ -9,6 +9,7 @@ package main
 import (
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
+	"platform/logger"
 	"symbols/internal/biz"
 	"symbols/internal/conf/gen"
 	"symbols/internal/data"
@@ -25,22 +26,23 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*kratos.App, func(), error) {
-	db := data.NewDB(confData, logger)
-	dataData, cleanup, err := data.NewData(db, logger)
+func wireApp(confServer *conf.Server, confData *conf.Data, logConfig *conf.LogConfig, logLogger log.Logger) (*kratos.App, func(), error) {
+	db := data.NewDB(confData, logLogger)
+	dataData, cleanup, err := data.NewData(db, logLogger)
 	if err != nil {
 		return nil, nil, err
 	}
 	transaction := data.NewTransaction(dataData)
-	symbolRepo := repo.NewSymbolRepo(db, transaction, logger)
+	symbolRepo := repo.NewSymbolRepo(db, transaction, logLogger)
 	validate := biz.NewSymbolValidator()
-	publisher := data.NewAmqpPublisher(confData, logger)
-	eventsPublisher := mq.NewEventPublisher(publisher)
-	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, eventsPublisher, logger)
+	watermillLogger := logger.NewWatermillLogger(logLogger)
+	publisher := data.NewAmqpPublisher(confData, logLogger, watermillLogger)
+	eventsPublisher := mq.NewEventPublisher(publisher, logLogger)
+	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, eventsPublisher, logLogger)
 	symbolService := service.NewSymbolService(symbolUseCase)
-	grpcServer := server.NewGRPCServer(confServer, symbolService, logger)
-	httpServer := server.NewHTTPServer(confServer, symbolService, logger)
-	app := newApp(logger, grpcServer, httpServer)
+	grpcServer := server.NewGRPCServer(confServer, symbolService, logLogger)
+	httpServer := server.NewHTTPServer(confServer, symbolService, logLogger)
+	app := newApp(logLogger, grpcServer, httpServer)
 	return app, func() {
 		cleanup()
 	}, nil

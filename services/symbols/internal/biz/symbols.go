@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"platform/events"
 	"platform/pagination"
-	"symbols/internal/biz/events"
 	"symbols/internal/data/common"
 
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-playground/validator/v10"
+	"gorm.io/gorm"
 )
 
 // SymbolUseCase is a Symbol use case.
@@ -46,8 +47,6 @@ func (uc *symbolUseCase) GetSymbol(ctx context.Context, id uint64) (*Symbol, err
 		return nil, ErrDatabaseOperation
 	}
 
-	uc.pub.Publish(ctx, "events", make([]byte, 10))
-
 	return symbol, nil
 }
 
@@ -58,7 +57,25 @@ func (uc *symbolUseCase) CreateSymbol(ctx context.Context, g *Symbol) (*Symbol, 
 		return nil, fmt.Errorf("%w: %v", ErrValidationFailed, err)
 	}
 
-	symbol, err := uc.repo.Create(ctx, g)
+	var symbol *Symbol
+	var err error
+
+	err = uc.tm.InTx(ctx, func(ctx context.Context, tx *gorm.DB) error {
+		var err error
+		symbol, err = uc.repo.Create(ctx, g)
+
+		if err != nil {
+			return err
+		}
+
+		err2 := uc.pub.Publish(ctx, "weweew", make([]byte, 10))
+		if err2 != nil {
+			return err2
+		}
+
+		return err
+	})
+
 	if err != nil {
 		uc.log.WithContext(ctx).Errorf("Create error: %v", err)
 
@@ -69,8 +86,6 @@ func (uc *symbolUseCase) CreateSymbol(ctx context.Context, g *Symbol) (*Symbol, 
 		// Generic database error
 		return nil, ErrDatabaseOperation
 	}
-
-	//uc.pub.Publish(ctx, 't')
 
 	return symbol, nil
 }
@@ -135,7 +150,7 @@ func (uc *symbolUseCase) DeleteSymbol(ctx context.Context, id uint64) error {
 // ListSymbols lists Symbols based on the provided options with pagination metadata.
 func (uc *symbolUseCase) ListSymbols(ctx context.Context, params *pagination.OffsetPaginationParams, filter map[string]interface{}) ([]*Symbol, *pagination.Meta, error) {
 
-	// Validate options (including params params)
+	// Validate options (including params )
 	if err := uc.validator.Struct(params); err != nil {
 		return nil, nil, fmt.Errorf("%w: %v", ErrValidationFailed, err)
 	}
@@ -146,8 +161,6 @@ func (uc *symbolUseCase) ListSymbols(ctx context.Context, params *pagination.Off
 		uc.log.WithContext(ctx).Errorf("Failed to list symbols: %v", err)
 		return nil, nil, ErrDatabaseOperation
 	}
-
-	uc.pub.Publish(ctx, "events", make([]byte, 10))
 
 	return symbols, meta, nil
 }

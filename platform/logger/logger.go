@@ -8,8 +8,10 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware/tracing"
 )
 
-func NewLogger(sid string, name string, version string) log.Logger {
-	return log.With(log.NewStdLogger(os.Stdout),
+func NewLogger(level string, sid string, name string, version string) log.Logger {
+	base := log.NewStdLogger(os.Stdout)
+	base = log.NewFilter(base, log.FilterLevel(log.ParseLevel(level)))
+	return log.With(base,
 		"ts", log.DefaultTimestamp,
 		"caller", log.DefaultCaller,
 		"service.id", sid,

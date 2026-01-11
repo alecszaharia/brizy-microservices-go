@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"os"
 	p "platform/logger"
 	"symbols/internal/conf/gen"
 	"symbols/internal/worker"
-	"time"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
@@ -33,27 +31,20 @@ func init() {
 	flag.StringVar(&configFile, "conf", "configs/config.yaml", "config path, eg: --conf config.yaml")
 }
 
-func newApp(runner worker.Runner, logger log.Logger) *kratos.App {
+func newApp(worker worker.Worker, logger log.Logger) *kratos.App {
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
 		kratos.Version(Version),
 		kratos.Metadata(map[string]string{}),
 		kratos.Logger(logger),
-		kratos.BeforeStart(func(ctx context.Context) error {
-			return runner.Run(ctx)
-		}),
-		kratos.AfterStop(func(ctx context.Context) error {
-			stopCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-			defer cancel()
-			return runner.Close(stopCtx)
-		}),
+		kratos.BeforeStart(worker.Start()),
+		kratos.AfterStop(worker.Stop()),
 	)
 }
 
 func main() {
 	flag.Parse()
-	logger := p.NewLogger(id, Name, Version)
 
 	c := config.New(
 		config.WithSource(
@@ -77,7 +68,9 @@ func main() {
 		panic(err)
 	}
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, logger)
+	logger := p.NewLogger(bc.Log.Level, id, Name, Version)
+
+	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Log, logger)
 	if err != nil {
 		panic(err)
 	}

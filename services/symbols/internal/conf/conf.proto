@@ -13,6 +13,7 @@ option go_package = "symbols/internal/conf;conf"; // ???? is this correct..
 message Bootstrap {
   Server server = 1;
   Data data = 2;
+  LogConfig log = 3;
 }
 
 message Server {
@@ -134,4 +135,16 @@ message RabbitMQServer {
 
   Exchange exchange = 3; // The exchange we publish to (or bind queue to)
   Queue queue = 4; // The queue we listen on (if this is a consumer)
+}
+
+message LogConfig {
+  // "debug" | "info" | "warn" | "error"
+  string level = 2 [(validate.rules).string = {
+    in: [
+      "debug",
+      "info",
+      "warn",
+      "error"
+    ]
+  }];
 }

@@ -116,11 +116,12 @@ cd services/{service-name} && go test -v ./internal/...
 
 The `platform/` module contains shared code:
 
+- `events/` - Publisher/Subscriber interfaces for event-driven architecture
 - `middleware/` - Request ID middleware with context propagation
 - `pagination/` - Offset-based pagination utilities
 - `adapters/` - Common transformers and adapters
 
-Platform code is imported by services as `brizy-go-platform/{package}`.
+Platform code is imported by services as `platform/{package}` (e.g., `platform/events`, `platform/middleware`).
 
 ## Key Technical Details
 
@@ -188,6 +189,85 @@ post: "/v1/{service-name}"
 ```
 
 This generates both gRPC and HTTP handlers automatically.
+
+## Event-Driven Architecture
+
+Services implement event-driven patterns using Watermill for pub/sub messaging with RabbitMQ (AMQP).
+
+### Worker Services
+
+Each service can have a companion **worker** binary that processes asynchronous events:
+
+```
+services/{service-name}/
+  ├── cmd/
+  │   ├── {service-name}/        # Main HTTP/gRPC service
+  │   └── {service-name}-worker/ # Event processing worker
+  ├── internal/
+  │   ├── handlers/              # Event handlers (business logic)
+  │   ├── worker/                # Worker setup (Watermill router)
+  │   └── ...
+```
+
+**Worker Architecture**:
+- Workers run the Watermill message router
+- Handlers delegate to business layer (biz) use cases
+- Full context propagation (request_id, correlation_id) from publisher to subscriber
+- Graceful shutdown with configurable timeout
+
+### Platform Abstractions
+
+Event interfaces are defined in `platform/events/`:
+
+```go
+type Publisher interface {
+    Publish(ctx context.Context, topic string, payload []byte) error
+    Unwrap() message.Publisher
+}
+
+type Subscriber interface {
+    Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error)
+    Close() error
+    Unwrap() message.Subscriber
+}
+```
+
+These abstractions allow swapping message brokers (AMQP, Redis, Kafka) without changing business logic.
+
+### Publisher/Subscriber Wrappers
+
+Located in `services/{service-name}/internal/data/mq/`:
+
+- **Publisher** (`publisher.go`) - Enriches messages with:
+  - Context propagation (`msg.SetContext(ctx)`)
+  - Correlation ID (generated or preserved)
+  - Request ID (extracted from HTTP context)
+  - Structured logging with full tracing
+
+- **Subscriber** (`subscriber.go`) - Provides:
+  - Lifecycle management
+  - Structured logging
+  - Access to underlying broker via `Unwrap()`
+
+### Context Propagation
+
+End-to-end tracing flows through the entire system:
+
+```
+HTTP Request → Middleware (request_id) → Use Case → Publisher
+    ↓
+Message (with context + metadata)
+    ↓
+Subscriber → Handler → Use Case (same request_id in logs)
+```
+
+**Best Practice**: Always use `logger.WithContext(ctx)` for distributed tracing.
+
+### Documentation
+
+For detailed information on extending the pub/sub system, adding new event types, and troubleshooting:
+
+📖 See [docs/pubsub-architecture.md](docs/pubsub-architecture.md)
 
 ### Mandatory actions:
 

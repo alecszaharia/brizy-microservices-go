@@ -8,6 +8,7 @@ import (
 	"platform/pagination"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
@@ -17,6 +18,24 @@ import (
 // MockSymbolRepo is a mock implementation of SymbolRepo for testing
 type MockSymbolRepo struct {
 	mock.Mock
+}
+
+// MockPublisher is a mock implementation of events.Publisher for testing
+type MockPublisher struct {
+	mock.Mock
+}
+
+func (m *MockPublisher) Publish(ctx context.Context, topic string, payload []byte) error {
+	args := m.Called(ctx, topic, payload)
+	return args.Error(0)
+}
+
+func (m *MockPublisher) Unwrap() message.Publisher {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(message.Publisher)
 }
 
 func (m *MockSymbolRepo) Create(ctx context.Context, symbol *Symbol) (*Symbol, error) {
@@ -63,7 +82,10 @@ func (m *MockSymbolRepo) Delete(ctx context.Context, id uint64) error {
 func setupSymbolUseCase(mockRepo *MockSymbolRepo) SymbolUseCase {
 	logger := log.NewStdLogger(os.Stdout)
 	v := NewSymbolValidator()
-	return NewSymbolUseCase(mockRepo, v, nil, logger)
+	mockPub := new(MockPublisher)
+	// Allow any Publish calls to succeed by default
+	mockPub.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	return NewSymbolUseCase(mockRepo, v, nil, mockPub, logger)
 }
 
 // Helper function to create a valid Symbol for testing

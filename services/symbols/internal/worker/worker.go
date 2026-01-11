@@ -3,28 +3,38 @@ package worker
 import (
 	"context"
 	"fmt"
-	"symbols/internal/data/mq"
+	"platform/events"
+	platform_logger "platform/logger"
+	conf "symbols/internal/conf/gen"
+	"symbols/internal/handlers"
 	"sync"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/message/router/plugin"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/google/wire"
 )
 
-// ProviderSet is server providers.
-var ProviderSet = wire.NewSet(NewRouter, NewWorker, mq.NewSubscriber)
+type HookFunc func(ctx context.Context) error
 
-type Runner interface {
-	Run(ctx context.Context) error
-	Close(ctx context.Context) error
+type Worker interface {
+	Start() HookFunc
+	Stop() HookFunc
+}
+
+func NewWorker(router *message.Router, logger log.Logger) Worker {
+	return &worker{
+		logger:       log.NewHelper(logger),
+		name:         "watermill-router",
+		router:       router,
+		closeTimeout: 15 * time.Second,
+		done:         make(chan struct{}),
+	}
 }
 
 type worker struct {
-	logger       log.Logger
+	logger       *log.Helper
 	name         string
 	router       *message.Router
 	closeTimeout time.Duration
@@ -36,20 +46,59 @@ type worker struct {
 	err  error
 }
 
-func NewWorker(router *message.Router, logger log.Logger) Runner {
-	return &worker{
-		logger:       logger,
-		name:         "watermill-router",
-		router:       router,
-		closeTimeout: 15 * time.Second,
-		done:         make(chan struct{}),
+func (w *worker) Start() HookFunc {
+	return func(ctx context.Context) error {
+		w.startOnce.Do(func() {
+			go func() {
+				defer close(w.done)
+				w.logger.WithContext(ctx).Infof("Starting router %s", w.name)
+				if err := w.router.Run(ctx); err != nil {
+					w.err = fmt.Errorf("%s: router run: %w", w.name, err)
+					w.logger.WithContext(ctx).Errorf("%v", w.err)
+				}
+			}()
+		})
+
+		return nil
 	}
 }
 
-func NewRouter(logger log.Logger) *message.Router {
+func (w *worker) Stop() HookFunc {
+	return func(ctx context.Context) error {
+		var closeErr error
+		w.stopOnce.Do(func() {
+			stopCtx, cancel := context.WithTimeout(ctx, w.closeTimeout)
+			defer cancel()
 
-	stdLogger := watermill.NewStdLogger(false, false)
-	router, err := message.NewRouter(message.RouterConfig{}, stdLogger)
+			w.logger.WithContext(ctx).Infof("Closing router %s", w.name)
+
+			errCh := make(chan error, 1)
+			go func() { errCh <- w.router.Close() }()
+
+			select {
+			case <-stopCtx.Done():
+				w.logger.WithContext(ctx).Errorf("Shutting down %s (timeout: %v)", w.name, w.closeTimeout)
+				closeErr = fmt.Errorf("%s: router close timeout: %w", w.name, stopCtx.Err())
+			case err := <-errCh:
+				if err != nil {
+					w.logger.WithContext(ctx).Errorf("%s: router failed to gracefully close: %v", w.name, err)
+					closeErr = fmt.Errorf("%s: router close: %w", w.name, err)
+				}
+			}
+		})
+
+		<-w.done
+		if closeErr != nil && w.err == nil {
+			w.err = closeErr
+		}
+
+		return w.err
+	}
+}
+
+func NewRouter(cfg *conf.Data, lifecycleHandler *handlers.LifecycleEventHandler, eventPub events.Publisher, eventSub events.Subscriber, logger *platform_logger.WatermillLogger) *message.Router {
+
+	router, err := message.NewRouter(message.RouterConfig{}, logger)
 
 	if err != nil {
 		panic(err)
@@ -69,7 +118,7 @@ func NewRouter(logger log.Logger) *message.Router {
 		middleware.Retry{
 			MaxRetries:      3,
 			InitialInterval: time.Millisecond * 100,
-			Logger:          stdLogger,
+			Logger:          logger,
 		}.Middleware,
 
 		// Recoverer handles panics from handlers.
@@ -77,55 +126,7 @@ func NewRouter(logger log.Logger) *message.Router {
 		middleware.Recoverer,
 	)
 
+	router.AddConsumerHandler("events", cfg.Mq.Exchange.Name, eventSub.Unwrap(), lifecycleHandler.Handle)
+
 	return router
-}
-
-func (w *worker) WithName(name string) *worker {
-	if name != "" {
-		w.name = name
-	}
-	return w
-}
-
-func (w *worker) WithCloseTimeout(d time.Duration) *worker {
-	if d > 0 {
-		w.closeTimeout = d
-	}
-	return w
-}
-
-func (w *worker) Run(ctx context.Context) error {
-	w.startOnce.Do(func() {
-		go func() {
-			defer close(w.done)
-			if err := w.router.Run(ctx); err != nil {
-				w.err = fmt.Errorf("%s: router run: %w", w.name, err)
-			}
-		}()
-	})
-	return w.err
-}
-
-func (w *worker) Close(ctx context.Context) error {
-	w.stopOnce.Do(func() {
-		stopCtx, cancel := context.WithTimeout(ctx, w.closeTimeout)
-		defer cancel()
-
-		errCh := make(chan error, 1)
-		go func() { errCh <- w.router.Close() }()
-
-		select {
-		case <-stopCtx.Done():
-			if w.err == nil {
-				w.err = fmt.Errorf("%s: router close timeout: %w", w.name, stopCtx.Err())
-			}
-		case err := <-errCh:
-			if err != nil && w.err == nil {
-				w.err = fmt.Errorf("%s: router close: %w", w.name, err)
-			}
-		}
-	})
-
-	<-w.done
-	return w.err
 }

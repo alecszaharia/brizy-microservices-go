@@ -9,11 +9,12 @@ import (
 	"github.com/google/uuid"
 )
 
-const RequestHeader = "X-Request-ID"
+const RequestIdHeader = "X-Request-ID"
+const RequestIdKey = "request_id"
 
 type requestIDKey struct{}
 
-func RequestIDMiddleware(logger *log.Helper) middleware.Middleware {
+func RequestIDMiddleware(logger log.Logger) middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
 		return func(ctx context.Context, req interface{}) (interface{}, error) {
 
@@ -21,10 +22,10 @@ func RequestIDMiddleware(logger *log.Helper) middleware.Middleware {
 			tr, hasTransport := transport.FromServerContext(ctx)
 
 			if hasTransport {
-				requestID = tr.RequestHeader().Get(RequestHeader)
+				requestID = tr.RequestHeader().Get(RequestIdHeader)
 			}
 
-			l := logger.WithContext(ctx)
+			l := log.NewHelper(logger).WithContext(ctx)
 			if requestID == "" || !isValidRequestID(requestID, l) {
 				requestID = generateId(l)
 			}
@@ -34,7 +35,7 @@ func RequestIDMiddleware(logger *log.Helper) middleware.Middleware {
 
 			// Add to response header if transport available
 			if hasTransport {
-				tr.ReplyHeader().Set(RequestHeader, requestID)
+				tr.ReplyHeader().Set(RequestIdHeader, requestID)
 			}
 
 			return handler(ctx, req)

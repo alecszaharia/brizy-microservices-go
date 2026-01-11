@@ -34,7 +34,6 @@ func (r *symbolRepo) Create(ctx context.Context, s *biz.Symbol) (*biz.Symbol, er
 
 	// Create symbol
 	if err := r.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Create(symbol).Error; err != nil {
-		r.log.WithContext(ctx).Errorf("Failed to save symbol: %v", err)
 		return nil, r.mapGormError(err)
 	}
 
@@ -68,7 +67,6 @@ func (r *symbolRepo) FindByID(ctx context.Context, id uint64) (*biz.Symbol, erro
 		First(&symbol).Error
 
 	if err != nil {
-		r.log.WithContext(ctx).Errorf("Failed to find symbol by ID %d: %v", id, err)
 		return nil, r.mapGormError(err)
 	}
 
@@ -89,7 +87,6 @@ func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint3
 
 	// Count total records WITH filters applied
 	if err := query.Count(&totalCount).Error; err != nil {
-		r.log.WithContext(ctx).Errorf("Failed to count symbols: %v", err)
 		return nil, nil, r.mapGormError(err)
 	}
 
@@ -97,7 +94,6 @@ func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint3
 	query = query.Limit(int(limit)).Offset(int(offset))
 
 	if err := query.Find(&symbolEntities).Error; err != nil {
-		r.log.WithContext(ctx).Errorf("Failed to list symbols: %v", err)
 		return nil, nil, r.mapGormError(err)
 	}
 

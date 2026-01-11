@@ -2,22 +2,17 @@ package data
 
 import (
 	"context"
+	platform_logger "platform/logger"
 	"symbols/internal/conf/gen"
 	"symbols/internal/data/common"
 	"symbols/internal/data/model"
-	"symbols/internal/data/mq"
-	"symbols/internal/data/repo"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-amqp/v3/pkg/amqp"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/google/wire"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
-
-// ProviderSet is Data providers.
-var ProviderSet = wire.NewSet(NewDB, NewData, NewTransaction, NewAmqpPublisher, repo.NewSymbolRepo, mq.NewEventPublisher)
 
 // Data .
 type Data struct {
@@ -76,10 +71,10 @@ func NewTransaction(d *Data) common.Transaction {
 	return d
 }
 
-func NewAmqpPublisher(cfg *conf.Data, logger log.Logger) *amqp.Publisher {
+func NewAmqpPublisher(cfg *conf.Data, logger log.Logger, wmLogger *platform_logger.WatermillLogger) message.Publisher {
 	amqpConfig := amqp.NewDurablePubSubConfig(
 		cfg.Mq.Addr,
-		amqp.GenerateQueueNameTopicNameWithSuffix(cfg.Mq.Queue.Name),
+		amqp.GenerateQueueNameConstant(cfg.Mq.Queue.Name),
 	)
 
 	amqpConfig.Exchange = amqp.ExchangeConfig{
@@ -87,15 +82,51 @@ func NewAmqpPublisher(cfg *conf.Data, logger log.Logger) *amqp.Publisher {
 			return cfg.Mq.Exchange.Name
 		},
 		Type:        cfg.Mq.Exchange.Type,
-		Durable:     cfg.Mq.Exchange.Durable.GetValue(),
-		AutoDeleted: cfg.Mq.Exchange.AutoDelete.GetValue(),
+		Durable:     cfg.Mq.Exchange.Durable.Value,
+		AutoDeleted: cfg.Mq.Exchange.AutoDelete.Value,
+	}
+	amqpConfig.Publish = amqp.PublishConfig{
+		GenerateRoutingKey: func(topic string) string {
+			return topic
+		},
 	}
 
-	publisher, err := amqp.NewPublisher(amqpConfig, watermill.NewStdLogger(false, false))
+	publisher, err := amqp.NewPublisher(amqpConfig, wmLogger)
+
 	if err != nil {
 		log.NewHelper(logger).Errorf("failed to create AMQP publisher: %v", err)
 	}
 	return publisher
+}
+
+func NewAmqpSubscriber(cfg *conf.Data, logger log.Logger, wmLogger *platform_logger.WatermillLogger) message.Subscriber {
+	amqpConfig := amqp.NewDurablePubSubConfig(
+		cfg.Mq.Addr,
+		amqp.GenerateQueueNameConstant(cfg.Mq.Queue.Name),
+	)
+
+	amqpConfig.Queue = amqp.QueueConfig{
+		GenerateName: func(topic string) string {
+			return cfg.Mq.Queue.Name
+		},
+		Durable:    cfg.Mq.Queue.Durable.Value,
+		AutoDelete: cfg.Mq.Queue.AutoDelete.Value,
+		Exclusive:  cfg.Mq.Queue.Exclusive.Value,
+		NoWait:     false,
+	}
+
+	amqpConfig.QueueBind = amqp.QueueBindConfig{
+		GenerateRoutingKey: func(topic string) string {
+			return cfg.Mq.Queue.BindingKey
+		},
+	}
+
+	subscriber, err := amqp.NewSubscriber(amqpConfig, wmLogger)
+
+	if err != nil {
+		log.NewHelper(logger).Errorf("failed to create AMQP subscriber: %v", err)
+	}
+	return subscriber
 }
 
 func (d *Data) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB) error) error {

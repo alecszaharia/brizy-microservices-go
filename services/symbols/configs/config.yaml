@@ -1,3 +1,6 @@
+log:
+  format: ${LOG_FORMAT:json}
+  level:  ${LOG_LEVEL:error}
 server:
   http:
     addr: 0.0.0.0:8000
@@ -41,15 +44,15 @@ data:
     addr: ${MQ_ADDR:amqp://guest:guest@rabbitmq:5672/}
     dial_timeout: ${MQ_DIAL_TIMEOUT:30s}
     exchange:
-      name: ${MQ_EXCHANGE_NAME:symbols.events}
-      type: ${MQ_EXCHANGE_TYPE:topic}
-      durable: false
+      name: ${MQ_EXCHANGE_NAME:lifecycle_events}
+      type: ${MQ_EXCHANGE_TYPE:fanout}
+      durable: true
       auto_delete: false
     queue:
-      name: ${MQ_QUEUE_NAME:symbols.updates}
+      name: ${MQ_QUEUE_NAME:lifecycle_event_queue}
       durable: true
       auto_delete: false
       exclusive: false
-      binding_key: ${MQ_QUEUE_BINDING_KEY:symbol.#}
+      binding_key: ${MQ_QUEUE_BINDING_KEY:symbols.#}
       prefetch_count: ${MQ_QUEUE_PREFETCH_COUNT:10}
       worker_count: ${MQ_QUEUE_WORKER_COUNT:5}

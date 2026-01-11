@@ -2,33 +2,82 @@ package mq
 
 import (
 	"context"
-	"log"
-	"symbols/internal/biz/events"
+	"fmt"
+	"platform/events"
+	middleware2 "platform/middleware"
 
 	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill-amqp/v3/pkg/amqp"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/go-kratos/kratos/v2/log"
 )
 
-func NewEventPublisher(pub *amqp.Publisher) events.Publisher {
-	return &eventPublisher{pub: pub}
+const RoutingKey = "routing_key"
+
+func NewEventPublisher(pub message.Publisher, logger log.Logger) events.Publisher {
+	return &eventPublisher{
+		pub:    pub,
+		logger: log.NewHelper(logger),
+	}
 }
 
 type eventPublisher struct {
-	pub *amqp.Publisher
+	pub    message.Publisher
+	logger *log.Helper
+}
+
+// Unwrap returns the underlying AMQP publisher for direct Watermill router usage
+func (ep *eventPublisher) Unwrap() message.Publisher {
+	return ep.pub
 }
 
 func (ep *eventPublisher) Publish(ctx context.Context, topic string, payload []byte) error {
-	msg := message.NewMessage(watermill.NewUUID(), payload)
-	correlationId := watermill.NewUUID()
-	middleware.SetCorrelationID(correlationId, msg)
 
-	log.Printf("sending message %s, correlation id: %s\n", msg.UUID, correlationId)
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+
+	// Propagate context to subscriber
+	msg.SetContext(ctx)
+
+	// Set correlation ID if not already set
+	correlationId := middleware.MessageCorrelationID(msg)
+	if correlationId == "" {
+		correlationId = watermill.NewUUID()
+		middleware.SetCorrelationID(correlationId, msg)
+	}
+
+	// Set the routing key if not already set
+	SetMessageRoutingKey(topic, msg)
+
+	if requestID := extractRequestID(ctx); requestID != "" {
+		msg.Metadata.Set(middleware2.RequestIdKey, requestID)
+	}
+
+	ep.logger.WithContext(ctx).Infof("Publishing message %s to topic %s, correlation_id: %s", msg.UUID, topic, correlationId)
 
 	if err := ep.pub.Publish(topic, msg); err != nil {
-		panic(err)
+		ep.logger.WithContext(ctx).Errorf("Failed to publish message %s to topic %s: %v", msg.UUID, topic, err)
+		return fmt.Errorf("failed to publish message to topic %s: %w", topic, err)
 	}
 
 	return nil
+}
+
+func SetMessageRoutingKey(key string, msg *message.Message) {
+	if MessageRoutingKey(msg) != "" {
+		return
+	}
+	msg.Metadata.Set(RoutingKey, key)
+}
+
+func MessageRoutingKey(message *message.Message) string {
+	return message.Metadata.Get(RoutingKey)
+}
+
+// extractRequestID safely extracts request ID from context
+func extractRequestID(ctx context.Context) string {
+	val := middleware2.RequestID()(ctx)
+	if requestID, ok := val.(string); ok {
+		return requestID
+	}
+	return ""
 }

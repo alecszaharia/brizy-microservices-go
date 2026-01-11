@@ -115,6 +115,35 @@ func (m *Bootstrap) validate(all bool) error {
 		}
 	}
 
+	if all {
+		switch v := interface{}(m.GetLog()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, BootstrapValidationError{
+					field:  "Log",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, BootstrapValidationError{
+					field:  "Log",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetLog()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return BootstrapValidationError{
+				field:  "Log",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return BootstrapMultiError(errors)
 	}
@@ -1503,6 +1532,123 @@ var _ interface {
 } = RabbitMQServerValidationError{}
 
 var _RabbitMQServer_Addr_Pattern = regexp.MustCompile("^amqps?://.*")
+
+// Validate checks the field values on LogConfig with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *LogConfig) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on LogConfig with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in LogConfigMultiError, or nil
+// if none found.
+func (m *LogConfig) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *LogConfig) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if _, ok := _LogConfig_Level_InLookup[m.GetLevel()]; !ok {
+		err := LogConfigValidationError{
+			field:  "Level",
+			reason: "value must be in list [debug info warn error]",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return LogConfigMultiError(errors)
+	}
+
+	return nil
+}
+
+// LogConfigMultiError is an error wrapping multiple validation errors returned
+// by LogConfig.ValidateAll() if the designated constraints aren't met.
+type LogConfigMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m LogConfigMultiError) Error() string {
+	msgs := make([]string, 0, len(m))
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m LogConfigMultiError) AllErrors() []error { return m }
+
+// LogConfigValidationError is the validation error returned by
+// LogConfig.Validate if the designated constraints aren't met.
+type LogConfigValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e LogConfigValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e LogConfigValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e LogConfigValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e LogConfigValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e LogConfigValidationError) ErrorName() string { return "LogConfigValidationError" }
+
+// Error satisfies the builtin error interface
+func (e LogConfigValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sLogConfig.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = LogConfigValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = LogConfigValidationError{}
+
+var _LogConfig_Level_InLookup = map[string]struct{}{
+	"debug": {},
+	"info":  {},
+	"warn":  {},
+	"error": {},
+}
 
 // Validate checks the field values on RabbitMQServer_Exchange with the rules
 // defined in the proto definition for this message. If any rules are

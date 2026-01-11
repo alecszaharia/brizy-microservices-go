@@ -9,7 +9,13 @@ package main
 import (
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
+	"platform/logger"
+	"symbols/internal/biz"
 	"symbols/internal/conf/gen"
+	"symbols/internal/data"
+	"symbols/internal/data/mq"
+	"symbols/internal/data/repo"
+	"symbols/internal/handlers"
 	"symbols/internal/worker"
 )
 
@@ -20,10 +26,26 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(server *conf.Server, data *conf.Data, logger log.Logger) (*kratos.App, func(), error) {
-	router := worker.NewRouter(logger)
-	runner := worker.NewWorker(router, logger)
-	app := newApp(runner, logger)
+func wireApp(server *conf.Server, confData *conf.Data, logConfig *conf.LogConfig, logLogger log.Logger) (*kratos.App, func(), error) {
+	db := data.NewDB(confData, logLogger)
+	dataData, cleanup, err := data.NewData(db, logLogger)
+	if err != nil {
+		return nil, nil, err
+	}
+	transaction := data.NewTransaction(dataData)
+	symbolRepo := repo.NewSymbolRepo(db, transaction, logLogger)
+	validate := biz.NewSymbolValidator()
+	watermillLogger := logger.NewWatermillLogger(logLogger)
+	publisher := data.NewAmqpPublisher(confData, logLogger, watermillLogger)
+	eventsPublisher := mq.NewEventPublisher(publisher, logLogger)
+	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, eventsPublisher, logLogger)
+	lifecycleEventHandler := handlers.NewLifecycleEventHandler(symbolUseCase, logLogger)
+	subscriber := data.NewAmqpSubscriber(confData, logLogger, watermillLogger)
+	eventsSubscriber := mq.NewEventSubscriber(subscriber, logLogger)
+	router := worker.NewRouter(confData, lifecycleEventHandler, eventsPublisher, eventsSubscriber, watermillLogger)
+	workerWorker := worker.NewWorker(router, logLogger)
+	app := newApp(workerWorker, logLogger)
 	return app, func() {
+		cleanup()
 	}, nil
 }
