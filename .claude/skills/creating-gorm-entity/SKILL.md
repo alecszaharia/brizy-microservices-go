@@ -1,9 +1,10 @@
 ---
 skill_name: creating-gorm-entity
-description: Generates GORM entity structs with proper field tags, relationships, and table naming for go-kratos microservices. Use when adding new database models to symbol-service.
-tags: [gorm, entity, database, model, kratos]
-version: 1.0.0
-last_updated: 2025-12-28
+description: Creates GORM entity structs (database models/ORM entities/schema definitions) with proper field tags, relationships, table naming, and BaseModel embedding for go-kratos microservices. Use when creating new database entities, adding GORM models, defining database schema, setting up table relationships (one-to-one, one-to-many), configuring indexes, implementing soft deletes, or adding new ORM models to any kratos service.
+tags: [gorm, entity, database, model, kratos, orm, schema, table, BaseModel, index, relationship, soft-delete]
+keywords: [create entity, new entity, database model, ORM, GORM entity, table definition, schema, database table, BaseModel, foreign key, relationship, index, soft delete]
+version: 2.0.0
+last_updated: 2026-01-12
 ---
 
 # GORM Entity Creation Skill

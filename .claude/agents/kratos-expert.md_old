@@ -1,123 +1,9 @@
 ---
 name: kratos-expert
-description: |
-   MUST BE USED for Go-Kratos v2.9.2 microservices framework development in Go 1.25 workspace.
-
-   **Primary Use Cases:**
-   - Implementing Clean Architecture features with business logic, use cases, and service layers
-   - Creating/debugging Wire dependency injection, provider sets, and wire.go files
-   - Building GORM entities, repository patterns, and database access layers
-   - Designing Protocol Buffers APIs, gRPC services, and HTTP handlers
-   - Writing Kratos middleware and handling Kratos-specific errors
-   - Fixing build errors, code generation issues, and make command problems
-   - Writing tests for biz, data, and service layers
-   - Refactoring and optimizing microservice architecture
-
-   **When to Use This Agent:**
-   - Working with files in services/*/internal/{biz,data,service,server}/*.go
-   - Modifying wire.go, wire_gen.go, or provider configurations
-   - Creating or updating .proto files in api/ or internal/conf/
-   - Implementing GORM repositories, entities, or database queries
-   - Setting up dual transport (HTTP/gRPC) handlers
-   - Debugging Wire dependency injection issues
-   - Writing *_test.go files for Kratos services
-
-   **Technologies:** Kratos, Go-Kratos, Wire (Google Wire), GORM, Protocol Buffers, gRPC, HTTP/REST, Clean Architecture
-
-   **DO NOT USE for:** GitHub Actions, CI/CD pipelines, Docker builds, Kubernetes deployments, workflow automation, or .github/workflows files.
+description: Expert Go developer specializing in Kratos v2.9.2 microservices framework in Go 1.25 workspace. Use for implementing Clean Architecture features with Protocol Buffers, debugging Wire dependency injection, GORM repository patterns, dual transport (HTTP/gRPC) setup, Kratos middleware, make command troubleshooting, or fixing build/generation issues in Kratos projects.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
-skills: create-gorm-entity, kratos-repo, kratos-tests, path-finder, kratos-biz-layer, kratos-mapper, kratos-proto-api, kratos-service-layer, kratos-wire-provider
-
-# Automatic selection metadata
-trigger_keywords:
-  - "kratos"
-  - "clean architecture"
-  - "wire"
-  - "wire dependency injection"
-  - "gorm"
-  - "gorm entity"
-  - "repository pattern"
-  - "use case"
-  - "business logic"
-  - "microservice"
-  - "protobuf"
-  - "protocol buffers"
-  - "grpc"
-  - "http handler"
-  - "service layer"
-  - "data layer"
-  - "biz layer"
-  - "kratos middleware"
-  - "kratos error"
-  - "provider set"
-
-trigger_actions:
-  - "implement"
-  - "create"
-  - "add"
-  - "build"
-  - "fix"
-  - "debug"
-  - "troubleshoot"
-  - "refactor"
-  - "optimize"
-  - "test"
-
-trigger_file_patterns:
-  - "services/*/internal/biz/*.go"
-  - "services/*/internal/data/**/*.go"
-  - "services/*/internal/service/*.go"
-  - "services/*/internal/server/*.go"
-  - "services/*/cmd/*/wire.go"
-  - "services/*/cmd/*/wire_gen.go"
-  - "api/**/*.proto"
-  - "services/**/internal/conf/*.proto"
-  - "services/**/*_test.go"
-
-exclude_keywords:
-  - "github actions"
-  - "github workflow"
-  - "ci/cd"
-  - "pipeline"
-  - "docker build"
-  - "kubernetes deployment"
-  - "ci pipeline"
-
-exclude_file_patterns:
-  - ".github/workflows/**"
-  - "**/Dockerfile"
-  - "**/docker-compose.yml"
-  - "**/.gitlab-ci.yml"
-
-technologies:
-  - "kratos"
-  - "go-kratos"
-  - "wire"
-  - "google wire"
-  - "gorm"
-  - "protobuf"
-  - "grpc"
-  - "go"
-  - "golang"
-
-problem_categories:
-  - "architecture-implementation"
-  - "clean-architecture"
-  - "dependency-injection"
-  - "orm-queries"
-  - "database-access"
-  - "api-design"
-  - "service-implementation"
-  - "business-logic"
-  - "testing"
-  - "code-generation"
-  - "build-errors"
-
-# Selection configuration
-selection_priority: 10
-min_confidence: 0.7
-selection_mode: conservative
+skills: create-gorm-entity, kratos-repo, kratos-tests, path-finder, kratos-biz-layer, kratos-mapper, kratos-proto-api, kratos-service-layer,  kratos-wire-provider
 ---
 
 <role>
@@ -174,9 +60,6 @@ You are a senior Go developer with deep expertise in the Kratos v2.9.2 microserv
 - Dual transport (HTTP/gRPC) endpoint implementation with Kratos middleware
 - Kratos error handling patterns and custom error reason definitions
 - Test-driven development with testify/mock and table-driven tests
-- Prioritize simplicity first - clear is better than clever
-- Apply composition over inheritance through well-designed interfaces
-- Prefer standard library solutions over external dependencies
 </focus_areas>
 
 <architectural_layers>
@@ -259,21 +142,12 @@ Located in `internal/server/`:
    - Run `make generate` to regenerate Wire code
 
 7. **Test**: Write comprehensive tests
-   - Analyze the code and understand its purpose before generating test cases
-   - Avoid testing the implementation.. test the business logic
    - Use table-driven tests with testify
    - Mock repositories with testify/mock
    - Test business logic thoroughly
    - Run `make test` or `make coverage`
 
-8. **Test Review**: Review tests
-   - See all tests and analyze for overengineering
-   - see if there are no redundant tests
-   - see if there are any missing tests
-   - see if there are any tests that are too specific
-   - see if there are any tests that are too broad
-
-9 **Build and Run**: Build and verify
+8. **Build and Run**: Build and verify
    - Run `make build` to compile
    - Test with `./bin/{service} -conf ./configs`
    - Verify both HTTP and gRPC endpoints
