@@ -79,9 +79,9 @@ func (m *mockHeader) Values(key string) []string {
 }
 
 // createTestLogger creates a test logger for use in tests
-func createTestLogger() *log.Helper {
+func createTestLogger() log.Logger {
 	logger := log.NewStdLogger(io.Discard)
-	return log.NewHelper(logger)
+	return logger
 }
 
 func TestRequestIDMiddleware(t *testing.T) {

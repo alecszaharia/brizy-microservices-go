@@ -13,6 +13,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 // MockSymbolRepo is a mock implementation of SymbolRepo for testing
@@ -78,14 +79,32 @@ func (m *MockSymbolRepo) Delete(ctx context.Context, id uint64) error {
 	return args.Error(0)
 }
 
+// MockTransaction is a mock implementation of common.Transaction for testing
+type MockTransaction struct {
+	mock.Mock
+}
+
+func (m *MockTransaction) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB) error) error {
+	args := m.Called(ctx, fn)
+	if args.Error(0) != nil {
+		return args.Error(0)
+	}
+	// Execute the callback immediately without a real transaction
+	return fn(ctx, nil)
+}
+
 // Helper function to create a test SymbolUseCase
 func setupSymbolUseCase(mockRepo *MockSymbolRepo) SymbolUseCase {
 	logger := log.NewStdLogger(os.Stdout)
 	v := NewSymbolValidator()
 	mockPub := new(MockPublisher)
+	mockTx := new(MockTransaction)
+
 	// Allow any Publish calls to succeed by default
 	mockPub.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
-	return NewSymbolUseCase(mockRepo, v, nil, mockPub, logger)
+	mockTx.On("InTx", mock.Anything, mock.Anything).Return(nil).Maybe()
+
+	return NewSymbolUseCase(mockRepo, v, mockTx, mockPub, logger)
 }
 
 // Helper function to create a valid Symbol for testing

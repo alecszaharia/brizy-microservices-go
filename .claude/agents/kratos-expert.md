@@ -12,6 +12,7 @@ description: |
    - Fixing build errors, code generation issues, and make command problems
    - Writing tests for biz, data, and service layers
    - Refactoring and optimizing microservice architecture
+   - Advising best practices for Go and Kratos development
 
    **When to Use This Agent:**
    - Working with files in services/*/internal/{biz,data,service,server}/*.go
