@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package events.symbols.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "contracts/gen/events/v1;v1";
+
+// SymbolCreated is published when a new symbol is created.
+message SymbolCreated {
+  // Unique identifier of the created symbol
+  uint64 id = 1;
+  // Project the symbol belongs to
+  uint64 project_id = 2;
+  // Unique identifier within the project
+  string uid = 3;
+  // Human-readable label
+  string label = 4;
+  // CSS class name
+  string class_name = 5;
+  // Component target reference
+  string component_target = 6;
+  // Symbol version
+  uint32 version = 7;
+  // Timestamp when the symbol was created
+  google.protobuf.Timestamp created_at = 8;
+}

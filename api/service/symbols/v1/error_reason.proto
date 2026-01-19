@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package symbols.v1;
+package service.symbols.v1;
 
 option go_package = "contracts/gen/symbols/v1;v1";
 
