@@ -1,9 +1,6 @@
 ---
-skill_name: kratos-repo
+name: kratos-repo
 description: Implements go-kratos data layer repositories following Clean Architecture patterns with GORM, transactions, pagination, and error handling. Use when adding new data access layers to kratos microservices that need database persistence.
-tags: [kratos, repository, gorm, clean-architecture, data-layer]
-version: 1.0.0
-last_updated: 2025-12-28
 ---
 
 # Kratos Repository Implementation Skill

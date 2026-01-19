@@ -1,10 +1,6 @@
 ---
 name: kratos-events
-description: Implements event-driven architecture with Watermill pub/sub (RabbitMQ/AMQP/message queue) for go-kratos microservices. Creates publisher/subscriber wrappers, event handlers, worker services (async processing), and ensures context propagation (request_id, correlation_id) for asynchronous message processing and background jobs. Use when implementing pub/sub patterns, creating message queues, adding event handlers, building worker services, publishing events, consuming messages, setting up async processing, implementing RabbitMQ integration, or adding background event processing.
-tags: [kratos, events, pubsub, watermill, amqp, rabbitmq, worker, async, message-queue, event-handler, publisher, subscriber, background-job]
-keywords: [event, pub/sub, pubsub, message queue, async, asynchronous, worker, RabbitMQ, AMQP, Watermill, publisher, subscriber, event handler, background processing, consume message, publish event]
-version: 2.0.0
-last_updated: 2026-01-12
+description: Implements event-driven architecture with Watermill pub/sub (RabbitMQ/AMQP/message queue) for go-kratos microservices. Creates publisher/subscriber wrappers, event handlers, worker services with context propagation (request_id, correlation_id), and RabbitMQ/AMQP integration. Use when implementing pub/sub patterns, creating message queues, adding event handlers, building worker services for async processing, or setting up background jobs.
 ---
 
 <essential_principles>

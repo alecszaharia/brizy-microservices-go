@@ -1,6 +1,6 @@
 ---
 name: kratos-biz-layer
-description: Generates business logic layer components for go-kratos microservices following Clean Architecture. Creates use cases, repository interfaces, business models, and validators. Use when adding business logic to kratos services.
+description: Generates business logic layer components (use cases, repository interfaces, business models, validators) for go-kratos microservices following Clean Architecture. Use when implementing domain logic, creating entity CRUD operations, adding validation rules, or orchestrating data access in kratos services.
 ---
 
 <essential_principles>

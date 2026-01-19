@@ -1,10 +1,6 @@
 ---
-skill_name: path-finder
+name: path-finder
 description: Provides correct file paths, import locations, and navigation guidance for brizy-go-services monorepo following Clean Architecture conventions and Go workspace structure. Helps locate entity files, navigate between layers (biz/data/service/server), find tests, resolve import paths, and answer "where is X located?" questions. Use when finding files, locating components, determining file paths, navigating project structure, resolving import paths, asking where files are located, or searching for entity/layer locations.
-tags: [paths, file-structure, clean-architecture, monorepo, workspace, navigation, import-path, file-location]
-keywords: [find, locate, where, where is, file path, import path, navigation, directory, file location, project structure, layer, entity file, find file]
-version: 2.0.0
-last_updated: 2026-01-12
 ---
 
 # Path Finder Skill

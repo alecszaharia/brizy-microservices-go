@@ -1,9 +1,6 @@
 ---
-skill_name: kratos-tests
-description: Write comprehensive tests for go-kratos code following Clean Architecture patterns. Analyzes existing test patterns, generates table-driven tests with testify/mock, and validates test execution. ALWAYS use this skill whenever you need to write or add tests in this project.
-tags: [kratos, unit-test, testing, testify, mock, table-driven, clean-architecture]
-version: 1.0.0
-last_updated: 2025-12-28
+name: kratos-tests
+description: Generates comprehensive table-driven tests for go-kratos microservices using testify/mock and testify/assert. Creates repository tests with in-memory SQLite, business layer tests with mocks, and service layer tests with proper context propagation. Use when writing unit tests for any kratos layer, adding test coverage, creating mock implementations, or validating CRUD operations.
 ---
 
 # Kratos Testing Skill
