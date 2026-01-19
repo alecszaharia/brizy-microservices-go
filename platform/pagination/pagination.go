@@ -1,3 +1,4 @@
+// Package pagination contains types and functions for working with pagination
 package pagination
 
 // OffsetPaginationParams contains offset/limit parameters for paginated queries

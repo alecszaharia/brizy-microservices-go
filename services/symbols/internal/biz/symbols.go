@@ -23,8 +23,8 @@ type symbolUseCase struct {
 }
 
 // NewSymbolUseCase creates a new Symbol use case.
-func NewSymbolUseCase(repo SymbolRepo, validator *validator.Validate, tm common.Transaction, pub events.Publisher, logger log.Logger) SymbolUseCase {
-	return &symbolUseCase{repo: repo, validator: validator, pub: pub, tm: tm, log: log.NewHelper(logger)}
+func NewSymbolUseCase(repo SymbolRepo, v *validator.Validate, tm common.Transaction, pub events.Publisher, logger log.Logger) SymbolUseCase {
+	return &symbolUseCase{repo: repo, validator: v, pub: pub, tm: tm, log: log.NewHelper(logger)}
 }
 
 // GetSymbol gets a Symbol by its ID.
@@ -54,13 +54,12 @@ func (uc *symbolUseCase) GetSymbol(ctx context.Context, id uint64) (*Symbol, err
 func (uc *symbolUseCase) CreateSymbol(ctx context.Context, g *Symbol) (*Symbol, error) {
 	// Validate domain model
 	if err := uc.validator.Struct(g); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrValidationFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrValidationFailed, err)
 	}
 
 	var symbol *Symbol
-	var err error
 
-	err = uc.tm.InTx(ctx, func(ctx context.Context, tx *gorm.DB) error {
+	err := uc.tm.InTx(ctx, func(ctx context.Context, tx *gorm.DB) error {
 		var err error
 		symbol, err = uc.repo.Create(ctx, g)
 
@@ -93,13 +92,13 @@ func (uc *symbolUseCase) CreateSymbol(ctx context.Context, g *Symbol) (*Symbol, 
 // UpdateSymbol updates an existing Symbol and returns the updated Symbol.
 func (uc *symbolUseCase) UpdateSymbol(ctx context.Context, g *Symbol) (*Symbol, error) {
 	// Validate ID
-	if g.Id <= 0 {
+	if g.ID <= 0 {
 		return nil, ErrInvalidID
 	}
 
 	// Validate domain model
 	if err := uc.validator.Struct(g); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrValidationFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrValidationFailed, err)
 	}
 
 	// Proceed to update
@@ -152,7 +151,7 @@ func (uc *symbolUseCase) ListSymbols(ctx context.Context, params *pagination.Off
 
 	// Validate options (including params )
 	if err := uc.validator.Struct(params); err != nil {
-		return nil, nil, fmt.Errorf("%w: %v", ErrValidationFailed, err)
+		return nil, nil, fmt.Errorf("%w: %w", ErrValidationFailed, err)
 	}
 
 	// Call a repository to get symbols and params metadata

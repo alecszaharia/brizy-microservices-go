@@ -13,7 +13,10 @@ func NewMetricsHandler(registry *Registry) http.Handler {
 		// Return a handler that serves empty metrics
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("Metrics disabled\n"))
+			_, err := w.Write([]byte("Metrics disabled\n"))
+			if err != nil {
+				return
+			}
 		})
 	}
 

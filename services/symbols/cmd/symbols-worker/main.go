@@ -19,9 +19,9 @@ import (
 // go build -ldflags "-X main.Version=x.y.z"
 var (
 	// Name is the name of the compiled software.
-	Name string = "symbol-worker"
+	Name = "symbol-worker"
 	// Version is the version of the compiled software.
-	Version string = "1.0"
+	Version = "1.0"
 	// configFile is the config flag.
 	configFile string
 
@@ -34,15 +34,15 @@ func init() {
 
 var buildInfo = build.NewBuildInfo(Name, Version)
 
-func newApp(worker worker.Worker, logger log.Logger) *kratos.App {
+func newApp(w worker.Worker, logger log.Logger) *kratos.App {
 	return kratos.New(
 		kratos.ID(id),
 		kratos.Name(Name),
 		kratos.Version(Version),
 		kratos.Metadata(map[string]string{}),
 		kratos.Logger(logger),
-		kratos.BeforeStart(worker.Start()),
-		kratos.AfterStop(worker.Stop()),
+		kratos.BeforeStart(w.Start()),
+		kratos.AfterStop(w.Stop()),
 	)
 }
 
@@ -55,7 +55,12 @@ func main() {
 			file.NewSource(configFile),
 		),
 	)
-	defer c.Close()
+	defer func(c config.Config) {
+		err := c.Close()
+		if err != nil {
+			log.Errorf("failed to close config: %v", err)
+		}
+	}(c)
 
 	if err := c.Load(); err != nil {
 		panic(err)

@@ -1,3 +1,4 @@
+// Package build provides build info.
 package build
 
 type ServiceBuildInfo struct {
@@ -7,6 +8,6 @@ type ServiceBuildInfo struct {
 	// we can add more info here later.
 }
 
-func NewBuildInfo(serviceName string, version string) *ServiceBuildInfo {
+func NewBuildInfo(serviceName, version string) *ServiceBuildInfo {
 	return &ServiceBuildInfo{serviceName, version}
 }

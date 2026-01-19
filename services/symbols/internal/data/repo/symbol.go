@@ -1,3 +1,4 @@
+// Package repo implements repository pattern for data access.
 package repo
 
 import (
@@ -13,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// NewSymbolRepo .
+// NewSymbolRepo creates a new symbol repository implementation.
 func NewSymbolRepo(db *gorm.DB, tx common.Transaction, logger log.Logger) biz.SymbolRepo {
 	return &symbolRepo{
 		db:  db,
@@ -46,7 +47,7 @@ func (r *symbolRepo) Update(ctx context.Context, symbol *biz.Symbol) (*biz.Symbo
 	entity := toEntitySymbol(symbol)
 
 	// Update symbol
-	result := r.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Model(&model.Symbol{}).Where("id = ?", symbol.Id).Updates(entity)
+	result := r.db.WithContext(ctx).Session(&gorm.Session{FullSaveAssociations: true}).Model(&model.Symbol{}).Where("id = ?", symbol.ID).Updates(entity)
 	if result.Error != nil {
 		return nil, r.mapGormError(result.Error)
 	}
@@ -55,7 +56,7 @@ func (r *symbolRepo) Update(ctx context.Context, symbol *biz.Symbol) (*biz.Symbo
 	}
 
 	// Fetch updated symbol with data
-	return r.FindByID(ctx, symbol.Id)
+	return r.FindByID(ctx, symbol.ID)
 }
 
 func (r *symbolRepo) FindByID(ctx context.Context, id uint64) (*biz.Symbol, error) {
@@ -168,9 +169,9 @@ func toDomainSymbol(s *model.Symbol) *biz.Symbol {
 	}
 
 	d := &biz.Symbol{
-		Id:              s.ID,
+		ID:              s.ID,
 		Project:         s.ProjectID,
-		Uid:             s.UID,
+		UID:             s.UID,
 		Label:           s.Label,
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
@@ -179,7 +180,7 @@ func toDomainSymbol(s *model.Symbol) *biz.Symbol {
 
 	if s.SymbolData != nil {
 		d.Data = &biz.SymbolData{
-			Id:      s.SymbolData.ID,
+			ID:      s.SymbolData.ID,
 			Project: s.ProjectID,
 			Data:    s.SymbolData.Data,
 		}
@@ -197,10 +198,10 @@ func toEntitySymbol(s *biz.Symbol) *model.Symbol {
 
 	d := &model.Symbol{
 		BaseModel: model.BaseModel{
-			ID: s.Id,
+			ID: s.ID,
 		},
 		ProjectID:       s.Project,
-		UID:             s.Uid,
+		UID:             s.UID,
 		Label:           s.Label,
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
@@ -210,9 +211,9 @@ func toEntitySymbol(s *biz.Symbol) *model.Symbol {
 	if s.Data != nil {
 		d.SymbolData = &model.SymbolData{
 			BaseModel: model.BaseModel{
-				ID: s.Data.Id,
+				ID: s.Data.ID,
 			},
-			SymbolID: s.Id,
+			SymbolID: s.ID,
 			Data:     s.Data.Data,
 		}
 	}

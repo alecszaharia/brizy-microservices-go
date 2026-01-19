@@ -1,3 +1,4 @@
+// Package metrics provides metrics.
 package metrics
 
 import "github.com/google/wire"

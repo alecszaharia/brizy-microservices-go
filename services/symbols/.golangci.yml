@@ -1,0 +1,224 @@
+# golangci-lint configuration for symbols service
+# Based on platform configuration with service-specific customizations
+# https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  # Timeout for analysis
+  timeout: 5m
+
+  # Use Go workspace mode (1.25+ with go.work)
+  go: "1.25"
+
+  tests: false
+
+linters:
+  default: none
+  enable:
+    # Bugs & Correctness
+    - errcheck          # Check for unchecked errors
+    - govet             # Vet examines Go source code
+    - ineffassign       # Detect ineffectual assignments
+    - staticcheck       # Advanced Go linter (includes gosimple, unused)
+    - bodyclose         # Check for HTTP response body close
+
+    # Complexity
+    - gocyclo           # Cyclomatic complexity
+    - gocognit          # Cognitive complexity
+    - funlen            # Function length
+
+    # Error Handling
+    - errname           # Check error naming conventions
+    - errorlint         # Find wrong error wrapping
+
+    # Code Quality
+    - goconst           # Find repeated strings that should be constants
+    - gocritic          # Most opinionated linter
+    - revive            # Fast, configurable, extensible linter
+
+    # Security
+    - gosec             # Security problems
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - io.Copy(*bytes.Buffer)
+        - io.Close(*bytes.Buffer)
+        - (*github.com/go-kratos/kratos/v2/log.Helper).Debug
+        - (*github.com/go-kratos/kratos/v2/log.Helper).Debugf
+        - (*github.com/go-kratos/kratos/v2/log.Helper).Info
+        - (*github.com/go-kratos/kratos/v2/log.Helper).Infof
+        - (*github.com/go-kratos/kratos/v2/log.Helper).Warn
+        - (*github.com/go-kratos/kratos/v2/log.Helper).Warnf
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment  # Too strict for clean architecture
+        - shadow          # Can be overly strict
+
+    gocyclo:
+      min-complexity: 15
+
+    gocognit:
+      min-complexity: 20
+
+    funlen:
+      lines: 100
+      statements: 50
+      ignore-comments: true
+
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+      ignore-tests: true
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - hugeParam          # Can be noisy
+        - rangeValCopy       # Can be noisy
+        - unnamedResult      # Not always bad for small functions
+        - whyNoLint          # We use nolint when needed
+
+    revive:
+      confidence: 0.8
+      rules:
+        # Enable important rules
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          disabled: true  # Too noisy for internal packages
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+          disabled: true  # Too strict
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+          disabled: true  # Wire/DI often has unused params
+        - name: unreachable-code
+        - name: redefines-builtin-id
+
+    gosec:
+      excludes:
+        - G104  # Audit errors not checked (covered by errcheck)
+        - G115  # integer overflow conversion (too noisy)
+      config:
+        G306: "0644"  # Allow reasonable file permissions
+
+    staticcheck:
+      checks: ["all"]
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: true
+
+  # Independently from option `exclude` we use default exclude patterns
+  exclude-use-default: true
+
+  # Directories to exclude
+  exclude-dirs:
+    - vendor
+    - third_party
+    - testdata
+    - .idea
+    - .github
+    - .claude
+
+  # Files to exclude (regex patterns)
+  exclude-files:
+    - ".*\\.pb\\.go$"          # Generated protobuf
+    - ".*\\.pb\\.gw\\.go$"     # Generated gRPC gateway
+    - ".*_gen\\.go$"           # Generated code (wire_gen.go, etc.)
+    - "wire_gen\\.go"          # Wire generated
+    - "ent_gen\\.go"           # Ent generated
+    - "mock_.*\\.go"           # Mock files
+
+  # Exclude specific issues
+  exclude:
+    - "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*print(f|ln)?|os\\.(Un)?Setenv). is not checked"
+
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - funlen
+        - goconst
+        - wrapcheck
+        - noctx
+
+    # Exclude linters for generated files
+    - path: ".*\\.pb\\.go"
+      linters:
+        - all
+
+    - path: wire_gen\.go
+      linters:
+        - all
+
+    # Exclude wire.go from some checks (DI files have special patterns)
+    - path: wire\.go
+      linters:
+        - unused
+        - deadcode
+
+    # Allow unused parameters in interface implementations
+    - text: "unused-parameter"
+      linters:
+        - revive
+      source: "func.*\\(.*context\\.Context.*\\)"
+
+    # Allow underscore in generated proto files
+    - path: ".*\\.pb\\.go"
+      text: "var-naming: don't use underscores in Go names"
+
+    # Allow complexity in server setup files
+    - path: internal/server/
+      linters:
+        - funlen
+        - gocyclo
+
+    # Allow longer functions in data layer (repos often have complex queries)
+    - path: internal/data/
+      linters:
+        - funlen
+        - gocognit
+
+    # Allow globals in cmd/main.go
+    - path: cmd/.*/main\.go
+      text: "G101|G104"
+      linters:
+        - gosec
+
+    # Context should be first argument (but Kratos middleware has different signature)
+    - text: "context-as-argument"
+      path: internal/server/
+
+    # Ignore comment formatting for generated code markers
+    - text: "comment"
+      source: "^//go:generate"

@@ -1,3 +1,4 @@
+// Package mq provides message queue publisher and subscriber implementations.
 package mq
 
 import (
@@ -39,20 +40,20 @@ func (ep *eventPublisher) Publish(ctx context.Context, topic string, payload []b
 	msg.SetContext(ctx)
 
 	// Set correlation ID if not already set
-	correlationId := middleware.MessageCorrelationID(msg)
-	if correlationId == "" {
-		correlationId = watermill.NewUUID()
-		middleware.SetCorrelationID(correlationId, msg)
+	correlationID := middleware.MessageCorrelationID(msg)
+	if correlationID == "" {
+		correlationID = watermill.NewUUID()
+		middleware.SetCorrelationID(correlationID, msg)
 	}
 
 	// Set the routing key if not already set
 	SetMessageRoutingKey(topic, msg)
 
 	if requestID := extractRequestID(ctx); requestID != "" {
-		msg.Metadata.Set(middleware2.RequestIdKey, requestID)
+		msg.Metadata.Set(middleware2.RequestIDKey, requestID)
 	}
 
-	ep.logger.WithContext(ctx).Infof("Publishing message %s to topic %s, correlation_id: %s", msg.UUID, topic, correlationId)
+	ep.logger.WithContext(ctx).Infof("Publishing message %s to topic %s, correlation_id: %s", msg.UUID, topic, correlationID)
 
 	if err := ep.pub.Publish(topic, msg); err != nil {
 		ep.logger.WithContext(ctx).Errorf("Failed to publish message %s to topic %s: %v", msg.UUID, topic, err)
@@ -69,8 +70,8 @@ func SetMessageRoutingKey(key string, msg *message.Message) {
 	msg.Metadata.Set(RoutingKey, key)
 }
 
-func MessageRoutingKey(message *message.Message) string {
-	return message.Metadata.Get(RoutingKey)
+func MessageRoutingKey(msg *message.Message) string {
+	return msg.Metadata.Get(RoutingKey)
 }
 
 // extractRequestID safely extracts request ID from context

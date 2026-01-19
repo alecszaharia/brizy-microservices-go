@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const unknownServiceOrMethod = "unknown"
+
 // GRPCMiddleware creates a Kratos middleware for recording gRPC request metrics.
 // This works as both a middleware and can be adapted for gRPC interceptor.
 func GRPCMiddleware(registry *Registry) middleware.Middleware {
@@ -47,11 +49,9 @@ func GRPCMiddleware(registry *Registry) middleware.Middleware {
 			// Extract service and method from operation
 			// Operation format: /package.Service/Method
 			operation := tr.Operation()
-			service := "unknown"
-			method := "unknown"
 
 			// Parse operation to get service and method
-			service, method = parseGRPCOperation(operation)
+			service, method := parseGRPCOperation(operation)
 
 			// Call the handler
 			reply, err := handler(ctx, req)
@@ -77,8 +77,8 @@ func GRPCMiddleware(registry *Registry) middleware.Middleware {
 // Operation format: /package.Service/Method or just Service/Method
 func parseGRPCOperation(operation string) (service, method string) {
 	// Default values
-	service = "unknown"
-	method = "unknown"
+	service = unknownServiceOrMethod
+	method = unknownServiceOrMethod
 
 	if operation == "" {
 		return

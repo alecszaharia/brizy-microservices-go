@@ -1,3 +1,4 @@
+// Package data implements the data access layer with repositories and database connections.
 package data
 
 import (
@@ -17,7 +18,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Data .
+// Data provides database access and transaction management.
 type Data struct {
 	db *gorm.DB
 }
@@ -74,7 +75,7 @@ func NewTransaction(d *Data) common.Transaction {
 	return d
 }
 
-func NewAmqpPublisher(cfg *conf.Data, logger log.Logger, wmLogger *platform_logger.WatermillLogger) message.Publisher {
+func NewAMQPPublisher(cfg *conf.Data, logger log.Logger, wmLogger *platform_logger.WatermillLogger) message.Publisher {
 	amqpConfig := amqp.NewDurablePubSubConfig(
 		cfg.Mq.Addr,
 		amqp.GenerateQueueNameConstant(cfg.Mq.Queue.Name),
@@ -102,7 +103,7 @@ func NewAmqpPublisher(cfg *conf.Data, logger log.Logger, wmLogger *platform_logg
 	return publisher
 }
 
-func NewAmqpSubscriber(cfg *conf.Data, logger log.Logger, wmLogger *platform_logger.WatermillLogger) message.Subscriber {
+func NewAMQPSubscriber(cfg *conf.Data, logger log.Logger, wmLogger *platform_logger.WatermillLogger) message.Subscriber {
 	amqpConfig := amqp.NewDurablePubSubConfig(
 		cfg.Mq.Addr,
 		amqp.GenerateQueueNameConstant(cfg.Mq.Queue.Name),

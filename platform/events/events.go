@@ -1,3 +1,4 @@
+// Package events provides interfaces for publishing and subscribing to events.
 package events
 
 import (

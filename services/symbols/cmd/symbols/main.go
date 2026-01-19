@@ -20,9 +20,9 @@ import (
 // go build -ldflags "-X main.Version=x.y.z"
 var (
 	// Name is the name of the compiled software.
-	Name string = "symbol-service"
+	Name = "symbol-service"
 	// Version is the version of the compiled software.
-	Version string = "1.0"
+	Version = "1.0"
 	// configFile is the config flag.
 	configFile string
 
@@ -59,7 +59,12 @@ func main() {
 			file.NewSource(configFile),
 		),
 	)
-	defer c.Close()
+	defer func(c config.Config) {
+		err := c.Close()
+		if err != nil {
+			log.Errorf("failed to close config: %v", err)
+		}
+	}(c)
 
 	if err := c.Load(); err != nil {
 		panic(err)

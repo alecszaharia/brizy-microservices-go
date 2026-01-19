@@ -99,6 +99,32 @@ make config
 # Note: buf generate for internal/conf/conf.proto
 ```
 
+### Go Linting (golangci-lint)
+
+The monorepo uses a hierarchical linting structure:
+
+```bash
+# Platform module
+make lint-platform          # Lint platform code
+make lint-platform-fix      # Lint with auto-fix
+
+# Specific service
+cd services/symbols
+make lint                   # Lint service code
+make lint-fix               # Lint with auto-fix
+
+# All modules
+make lint-all               # Lint platform + all services
+make lint-all-fix           # Lint with auto-fix
+```
+
+**Configuration Files**:
+- Root `.golangci.yml` - Platform module (scoped to platform/ via skip-dirs)
+- `services/{service}/.golangci.yml` - Service-specific (copy of platform baseline)
+- Contracts excluded (generated code)
+
+📖 See [docs/golangci-lint.md](docs/golangci-lint.md) for detailed documentation.
+
 ### Running Tests
 
 ```bash

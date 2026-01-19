@@ -16,6 +16,8 @@ var (
 	defaultHistogramBuckets = []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0}
 )
 
+const unknownValue = "unknown"
+
 // HTTPMiddleware creates a Kratos middleware for recording HTTP request metrics.
 func HTTPMiddleware(registry *Registry) middleware.Middleware {
 	if registry == nil {
@@ -51,24 +53,7 @@ func HTTPMiddleware(registry *Registry) middleware.Middleware {
 			}
 
 			// Extract route pattern and method
-			route := tr.Operation()
-			if route == "" {
-				route = "unknown"
-			}
-
-			method := "unknown"
-			// Check if this is HTTP transport
-			if httpTr, ok := tr.(kratoshttp.Transporter); ok {
-				httpReq := httpTr.Request()
-				if httpReq != nil {
-					method = httpReq.Method
-				}
-				// Use path template for better route pattern
-				pathTemplate := httpTr.PathTemplate()
-				if pathTemplate != "" {
-					route = pathTemplate
-				}
-			}
+			route, method := getRouteAndMethod(tr)
 
 			// Call the handler
 			reply, err := handler(ctx, req)
@@ -89,4 +74,26 @@ func HTTPMiddleware(registry *Registry) middleware.Middleware {
 			return reply, err
 		}
 	}
+}
+
+func getRouteAndMethod(tr transport.Transporter) (string, string) {
+	route := tr.Operation()
+	if route == "" {
+		route = unknownValue
+	}
+
+	method := unknownValue
+	// Check if this is HTTP transport
+	if httpTr, ok := tr.(kratoshttp.Transporter); ok {
+		httpReq := httpTr.Request()
+		if httpReq != nil {
+			method = httpReq.Method
+		}
+		// Use path template for better route pattern
+		pathTemplate := httpTr.PathTemplate()
+		if pathTemplate != "" {
+			route = pathTemplate
+		}
+	}
+	return route, method
 }

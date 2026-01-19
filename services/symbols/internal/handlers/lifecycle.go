@@ -1,3 +1,4 @@
+// Package handlers contains event handlers for asynchronous message processing.
 package handlers
 
 import (

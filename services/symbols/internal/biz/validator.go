@@ -7,10 +7,10 @@ import (
 // ProviderSet is biz providers.
 
 func NewSymbolValidator() *validator.Validate {
-	validator := validator.New()
+	v := validator.New()
 
 	// add all custom validations here
 	// https://github.com/go-playground/validator/blob/master/_examples/struct-level/main.go.
 	// https://github.com/go-playground/validator/blob/master/_examples/simple/main.go
-	return validator
+	return v
 }

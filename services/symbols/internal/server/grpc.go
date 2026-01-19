@@ -1,3 +1,4 @@
+// Package server configures HTTP and gRPC servers with middleware.
 package server
 
 import (

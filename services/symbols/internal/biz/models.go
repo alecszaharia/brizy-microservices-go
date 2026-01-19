@@ -1,9 +1,10 @@
+// Package biz implements the business logic layer with use cases and domain models.
 package biz
 
 import "platform/pagination"
 
 type SymbolData struct {
-	Id      uint64  `validate:"omitempty,gte=0"`
+	ID      uint64  `validate:"omitempty,gte=0"`
 	Project uint64  `validate:"required,gt=0"`
 	Data    *[]byte `validate:"omitempty"`
 }
@@ -15,9 +16,9 @@ type ListSymbolsOptions struct {
 }
 
 type Symbol struct {
-	Id              uint64      `validate:"omitempty,gte=0"`
+	ID              uint64      `validate:"omitempty,gte=0"`
 	Project         uint64      `validate:"required,gt=0"`
-	Uid             string      `validate:"required,uuid4"`
+	UID             string      `validate:"required,uuid4"`
 	Label           string      `validate:"required,min=1,max=255"`
 	ClassName       string      `validate:"required,min=1,max=255"`
 	ComponentTarget string      `validate:"required,min=1,max=100"`

@@ -31,9 +31,9 @@ func Test_toBizSymbol(t *testing.T) {
 				Data:            data,
 			},
 			expected: &biz.Symbol{
-				Id:              123,
+				ID:              123,
 				Project:         456,
-				Uid:             "550e8400-e29b-41d4-a716-446655440000",
+				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test Symbol",
 				ClassName:       "TestClass",
 				ComponentTarget: "web",
@@ -57,9 +57,9 @@ func Test_toBizSymbol(t *testing.T) {
 				Data:            []byte{},
 			},
 			expected: &biz.Symbol{
-				Id:              1,
+				ID:              1,
 				Project:         2,
-				Uid:             "550e8400-e29b-41d4-a716-446655440001",
+				UID:             "550e8400-e29b-41d4-a716-446655440001",
 				Label:           "Empty Data Symbol",
 				ClassName:       "EmptyClass",
 				ComponentTarget: "mobile",
@@ -76,9 +76,9 @@ func Test_toBizSymbol(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := toBizSymbol(tt.input)
 
-			assert.Equal(t, tt.expected.Id, result.Id)
+			assert.Equal(t, tt.expected.ID, result.ID)
 			assert.Equal(t, tt.expected.Project, result.Project)
-			assert.Equal(t, tt.expected.Uid, result.Uid)
+			assert.Equal(t, tt.expected.UID, result.UID)
 			assert.Equal(t, tt.expected.Label, result.Label)
 			assert.Equal(t, tt.expected.ClassName, result.ClassName)
 			assert.Equal(t, tt.expected.ComponentTarget, result.ComponentTarget)
@@ -112,7 +112,7 @@ func Test_toBizSymbolFromRequest(t *testing.T) {
 			},
 			expected: &biz.Symbol{
 				Project:         789,
-				Uid:             "550e8400-e29b-41d4-a716-446655440002",
+				UID:             "550e8400-e29b-41d4-a716-446655440002",
 				Label:           "New Symbol",
 				ClassName:       "NewClass",
 				ComponentTarget: "desktop",
@@ -136,7 +136,7 @@ func Test_toBizSymbolFromRequest(t *testing.T) {
 			},
 			expected: &biz.Symbol{
 				Project:         1,
-				Uid:             "550e8400-e29b-41d4-a716-446655440003",
+				UID:             "550e8400-e29b-41d4-a716-446655440003",
 				Label:           "Min Symbol",
 				ClassName:       "MinClass",
 				ComponentTarget: "app",
@@ -154,7 +154,7 @@ func Test_toBizSymbolFromRequest(t *testing.T) {
 			result := SymbolFromCreateRequest(tt.input)
 
 			assert.Equal(t, tt.expected.Project, result.Project)
-			assert.Equal(t, tt.expected.Uid, result.Uid)
+			assert.Equal(t, tt.expected.UID, result.UID)
 			assert.Equal(t, tt.expected.Label, result.Label)
 			assert.Equal(t, tt.expected.ClassName, result.ClassName)
 			assert.Equal(t, tt.expected.ComponentTarget, result.ComponentTarget)
@@ -178,9 +178,9 @@ func Test_toV1Symbol(t *testing.T) {
 		{
 			name: "complete biz symbol to v1",
 			input: &biz.Symbol{
-				Id:              999,
+				ID:              999,
 				Project:         888,
-				Uid:             "550e8400-e29b-41d4-a716-446655440004",
+				UID:             "550e8400-e29b-41d4-a716-446655440004",
 				Label:           "Converted Symbol",
 				ClassName:       "ConvertedClass",
 				ComponentTarget: "universal",
@@ -204,9 +204,9 @@ func Test_toV1Symbol(t *testing.T) {
 		{
 			name: "biz symbol with nil data",
 			input: &biz.Symbol{
-				Id:              100,
+				ID:              100,
 				Project:         200,
-				Uid:             "550e8400-e29b-41d4-a716-446655440005",
+				UID:             "550e8400-e29b-41d4-a716-446655440005",
 				Label:           "No Data Symbol",
 				ClassName:       "NoDataClass",
 				ComponentTarget: "none",
@@ -227,9 +227,9 @@ func Test_toV1Symbol(t *testing.T) {
 		{
 			name: "biz symbol with empty data bytes",
 			input: &biz.Symbol{
-				Id:              101,
+				ID:              101,
 				Project:         201,
-				Uid:             "550e8400-e29b-41d4-a716-446655440006",
+				UID:             "550e8400-e29b-41d4-a716-446655440006",
 				Label:           "Empty Bytes Symbol",
 				ClassName:       "EmptyBytesClass",
 				ComponentTarget: "all",

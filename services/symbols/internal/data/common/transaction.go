@@ -1,4 +1,5 @@
-package common
+// Package common provides shared utilities for data layer operations including transaction management.
+package common //nolint:revive // "common" is an acceptable name for shared utilities
 
 import (
 	"context"

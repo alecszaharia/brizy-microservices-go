@@ -37,7 +37,7 @@ func wireApp(serviceBuildInfo *build.ServiceBuildInfo, confServer *conf.Server, 
 	symbolRepo := repo.NewSymbolRepo(db, transaction, logLogger)
 	validate := biz.NewSymbolValidator()
 	watermillLogger := logger.NewWatermillLogger(logLogger)
-	publisher := data.NewAmqpPublisher(confData, logLogger, watermillLogger)
+	publisher := data.NewAMQPPublisher(confData, logLogger, watermillLogger)
 	eventsPublisher := data.NewEventPublisherWithMetrics(publisher, metrics, registry, logLogger)
 	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, eventsPublisher, logLogger)
 	symbolService := service.NewSymbolService(symbolUseCase)

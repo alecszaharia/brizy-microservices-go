@@ -1,3 +1,4 @@
+// Package model contains GORM entity definitions for database persistence.
 package model
 
 import (

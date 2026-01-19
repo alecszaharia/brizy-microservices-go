@@ -1,3 +1,4 @@
+// Package worker implements the Watermill message router and worker lifecycle.
 package worker
 
 import (

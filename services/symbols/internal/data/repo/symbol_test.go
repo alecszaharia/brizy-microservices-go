@@ -43,7 +43,7 @@ func validDomainSymbol() *biz.Symbol {
 	data := []byte(`{"key": "value"}`)
 	return &biz.Symbol{
 		Project:         1,
-		Uid:             "550e8400-e29b-41d4-a716-446655440000",
+		UID:             "550e8400-e29b-41d4-a716-446655440000",
 		Label:           "Test Symbol",
 		ClassName:       "TestClass",
 		ComponentTarget: "TestTarget",
@@ -97,10 +97,10 @@ func TestCreate(t *testing.T) {
 			wantErr: false,
 			checkResult: func(t *testing.T, result *biz.Symbol) {
 				assert.NotNil(t, result)
-				assert.NotZero(t, result.Id)
+				assert.NotZero(t, result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
 				assert.NotNil(t, result.Data)
-				assert.NotZero(t, result.Data.Id)
+				assert.NotZero(t, result.Data.ID)
 			},
 		},
 		{
@@ -114,7 +114,7 @@ func TestCreate(t *testing.T) {
 			wantErr: false,
 			checkResult: func(t *testing.T, result *biz.Symbol) {
 				assert.NotNil(t, result)
-				assert.NotZero(t, result.Id)
+				assert.NotZero(t, result.ID)
 				assert.Nil(t, result.Data)
 			},
 		},
@@ -181,7 +181,7 @@ func TestUpdate(t *testing.T) {
 			wantErr: false,
 			checkResult: func(t *testing.T, result *biz.Symbol) {
 				assert.NotNil(t, result)
-				assert.NotZero(t, result.Id)
+				assert.NotZero(t, result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
 			},
 		},
@@ -207,7 +207,7 @@ func TestUpdate(t *testing.T) {
 			name: "not found error",
 			input: func() *biz.Symbol {
 				s := validDomainSymbol()
-				s.Id = 999
+				s.ID = 999
 				return s
 			}(),
 			setup: func(db *gorm.DB) uint64 {
@@ -226,7 +226,7 @@ func TestUpdate(t *testing.T) {
 			defer cleanupDB(db)
 
 			id := tt.setup(db)
-			tt.input.Id = id
+			tt.input.ID = id
 
 			logger := log.NewStdLogger(os.Stdout)
 			tx := &mockTransaction{}
@@ -269,7 +269,7 @@ func TestFindByID(t *testing.T) {
 			wantErr: false,
 			checkResult: func(t *testing.T, result *biz.Symbol) {
 				assert.NotNil(t, result)
-				assert.NotZero(t, result.Id)
+				assert.NotZero(t, result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
 				assert.NotNil(t, result.Data)
 			},
@@ -285,7 +285,7 @@ func TestFindByID(t *testing.T) {
 			wantErr: false,
 			checkResult: func(t *testing.T, result *biz.Symbol) {
 				assert.NotNil(t, result)
-				assert.NotZero(t, result.Id)
+				assert.NotZero(t, result.ID)
 				assert.Nil(t, result.Data)
 			},
 		},
@@ -641,9 +641,9 @@ func TestToDomainSymbol(t *testing.T) {
 			input: validEntitySymbol(),
 			assert: func(t *testing.T, result *biz.Symbol) {
 				assert.NotNil(t, result)
-				assert.Equal(t, uint64(0), result.Id) // Entity ID not set
+				assert.Equal(t, uint64(0), result.ID) // Entity ID not set
 				assert.Equal(t, uint64(1), result.Project)
-				assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", result.Uid)
+				assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", result.UID)
 				assert.Equal(t, "Test Symbol", result.Label)
 				assert.Equal(t, "TestClass", result.ClassName)
 				assert.Equal(t, "TestTarget", result.ComponentTarget)

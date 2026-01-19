@@ -1,3 +1,4 @@
+// Package middleware contains request id middleware
 package middleware
 
 import (
@@ -9,8 +10,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const RequestIdHeader = "X-Request-ID"
-const RequestIdKey = "request_id"
+const RequestIDHeader = "X-Request-ID"
+const RequestIDKey = "request_id"
 
 type requestIDKey struct{}
 
@@ -22,12 +23,12 @@ func RequestIDMiddleware(logger log.Logger) middleware.Middleware {
 			tr, hasTransport := transport.FromServerContext(ctx)
 
 			if hasTransport {
-				requestID = tr.RequestHeader().Get(RequestIdHeader)
+				requestID = tr.RequestHeader().Get(RequestIDHeader)
 			}
 
 			l := log.NewHelper(logger).WithContext(ctx)
 			if requestID == "" || !isValidRequestID(requestID, l) {
-				requestID = generateId(l)
+				requestID = generateID(l)
 			}
 
 			// Add to context
@@ -35,7 +36,7 @@ func RequestIDMiddleware(logger log.Logger) middleware.Middleware {
 
 			// Add to response header if transport available
 			if hasTransport {
-				tr.ReplyHeader().Set(RequestIdHeader, requestID)
+				tr.ReplyHeader().Set(RequestIDHeader, requestID)
 			}
 
 			return handler(ctx, req)
@@ -54,7 +55,7 @@ func RequestID() log.Valuer {
 	}
 }
 
-func generateId(logger *log.Helper) string {
+func generateID(logger *log.Helper) string {
 	requestID := uuid.New().String()
 	logger.Debugf("Generated new request ID: %s", requestID)
 	return requestID

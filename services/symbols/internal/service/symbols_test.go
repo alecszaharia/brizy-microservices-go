@@ -78,15 +78,15 @@ func TestCreateSymbol(t *testing.T) {
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.CreateSymbolRequest) {
 				input := SymbolFromCreateRequest(req)
 				output := &biz.Symbol{
-					Id:              1,
+					ID:              1,
 					Project:         req.ProjectId,
-					Uid:             req.Uid,
+					UID:             req.Uid,
 					Label:           req.Label,
 					ClassName:       req.ClassName,
 					ComponentTarget: req.ComponentTarget,
 					Version:         req.Version,
 					Data: &biz.SymbolData{
-						Id:      1,
+						ID:      1,
 						Project: req.ProjectId,
 						Data:    &req.Data,
 					},
@@ -132,15 +132,15 @@ func TestCreateSymbol(t *testing.T) {
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.CreateSymbolRequest) {
 				input := SymbolFromCreateRequest(req)
 				output := &biz.Symbol{
-					Id:              1,
+					ID:              1,
 					Project:         req.ProjectId,
-					Uid:             req.Uid,
+					UID:             req.Uid,
 					Label:           req.Label,
 					ClassName:       req.ClassName,
 					ComponentTarget: req.ComponentTarget,
 					Version:         req.Version,
 					Data: &biz.SymbolData{
-						Id:      1,
+						ID:      1,
 						Project: req.ProjectId,
 						Data:    &req.Data,
 					},
@@ -226,29 +226,29 @@ func TestListSymbols(t *testing.T) {
 				data2 := []byte("data2")
 				symbols := []*biz.Symbol{
 					{
-						Id:              1,
+						ID:              1,
 						Project:         1,
-						Uid:             "uid1",
+						UID:             "uid1",
 						Label:           "Symbol 1",
 						ClassName:       "Class1",
 						ComponentTarget: "component1",
 						Version:         1,
 						Data: &biz.SymbolData{
-							Id:      1,
+							ID:      1,
 							Project: 1,
 							Data:    &data1,
 						},
 					},
 					{
-						Id:              2,
+						ID:              2,
 						Project:         1,
-						Uid:             "uid2",
+						UID:             "uid2",
 						Label:           "Symbol 2",
 						ClassName:       "Class2",
 						ComponentTarget: "component2",
 						Version:         1,
 						Data: &biz.SymbolData{
-							Id:      2,
+							ID:      2,
 							Project: 1,
 							Data:    &data2,
 						},
@@ -322,9 +322,9 @@ func TestListSymbols(t *testing.T) {
 				options, _ := NewListSymbolsOptions(req)
 				symbols := []*biz.Symbol{
 					{
-						Id:              1,
+						ID:              1,
 						Project:         1,
-						Uid:             "uid1",
+						UID:             "uid1",
 						Label:           "Symbol 1",
 						ClassName:       "Class1",
 						ComponentTarget: "component1",
@@ -391,15 +391,15 @@ func TestGetSymbol(t *testing.T) {
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.GetSymbolRequest) {
 				data := []byte("test data")
 				symbol := &biz.Symbol{
-					Id:              1,
+					ID:              1,
 					Project:         1,
-					Uid:             "550e8400-e29b-41d4-a716-446655440000",
+					UID:             "550e8400-e29b-41d4-a716-446655440000",
 					Label:           "Test Symbol",
 					ClassName:       "TestClass",
 					ComponentTarget: "component",
 					Version:         1,
 					Data: &biz.SymbolData{
-						Id:      1,
+						ID:      1,
 						Project: 1,
 						Data:    &data,
 					},
@@ -432,9 +432,9 @@ func TestGetSymbol(t *testing.T) {
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.GetSymbolRequest) {
 				symbol := &biz.Symbol{
-					Id:              1,
+					ID:              1,
 					Project:         1,
-					Uid:             "550e8400-e29b-41d4-a716-446655440000",
+					UID:             "550e8400-e29b-41d4-a716-446655440000",
 					Label:           "Test Symbol",
 					ClassName:       "TestClass",
 					ComponentTarget: "component",
@@ -500,15 +500,15 @@ func TestUpdateSymbol(t *testing.T) {
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.UpdateSymbolRequest) {
 				input := SymbolFromUpdateRequest(req)
 				output := &biz.Symbol{
-					Id:              req.Id,
+					ID:              req.Id,
 					Project:         req.ProjectId,
-					Uid:             req.Uid,
+					UID:             req.Uid,
 					Label:           req.Label,
 					ClassName:       req.ClassName,
 					ComponentTarget: req.ComponentTarget,
 					Version:         req.Version,
 					Data: &biz.SymbolData{
-						Id:      1,
+						ID:      1,
 						Project: req.ProjectId,
 						Data:    &req.Data,
 					},

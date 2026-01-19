@@ -15,7 +15,7 @@ else
 	API_PROTO_FILES=$(shell find api -name *.proto)
 endif
 
-.PHONY: init config api build generate all test coverage help
+.PHONY: init config api build generate all test coverage lint lint-fix help
 
 APP_NAME := symbols
 BIN_DIR := bin
@@ -66,6 +66,16 @@ coverage:
 	go test -v -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+# run linting
+lint:
+	@echo "Running golangci-lint on symbols service..."
+	golangci-lint run ./...
+
+# run linting with auto-fix
+lint-fix:
+	@echo "Running golangci-lint with auto-fix on symbols service..."
+	golangci-lint run --fix ./...
 
 # show help
 help:

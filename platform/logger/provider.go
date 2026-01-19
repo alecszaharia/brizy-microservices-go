@@ -1,3 +1,4 @@
+// Package logger
 package logger
 
 import "github.com/google/wire"

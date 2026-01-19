@@ -9,6 +9,7 @@
 - **Go 1.25+** - Primary programming language
 - **make** - Build automation (pre-installed on macOS/Linux)
 - **git** - Version control (required for versioning and breaking change detection)
+- **golangci-lint** - Linter ([installation](https://golangci-lint.run/usage/install/)) 
 - **Docker & Docker Compose** - Container runtime ([installation](https://docs.docker.com/get-docker/))
 
 ### Protocol Buffers Tools
@@ -202,6 +203,10 @@ make generate   # Generate Wire dependency injection code
 make build      # Build binary → bin/service-name
 make test       # Run tests with race detection
 make coverage   # Generate coverage report
+make lint-platform:   # Lint platform code
+make lint-platform-fix:   # Fix platform code linting issues
+make lint-all:   # Lint platform code and service code
+make lint-all-fix:   # Fix platform code and service code linting issues
 ```
 
 ## Documentation

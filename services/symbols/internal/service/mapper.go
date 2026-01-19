@@ -1,3 +1,4 @@
+// Package service implements the service layer with gRPC/HTTP handlers.
 package service
 
 import (
@@ -12,9 +13,9 @@ import (
 
 func toBizSymbol(s *v1.Symbol) *biz.Symbol {
 	return &biz.Symbol{
-		Id:              s.Id,
+		ID:              s.Id,
 		Project:         s.ProjectId,
-		Uid:             s.Uid,
+		UID:             s.Uid,
 		Label:           s.Label,
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
@@ -29,7 +30,7 @@ func toBizSymbol(s *v1.Symbol) *biz.Symbol {
 func SymbolFromCreateRequest(s *v1.CreateSymbolRequest) *biz.Symbol {
 	return &biz.Symbol{
 		Project:         s.ProjectId,
-		Uid:             s.Uid,
+		UID:             s.Uid,
 		Label:           s.Label,
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
@@ -42,9 +43,9 @@ func SymbolFromCreateRequest(s *v1.CreateSymbolRequest) *biz.Symbol {
 }
 func SymbolFromUpdateRequest(s *v1.UpdateSymbolRequest) *biz.Symbol {
 	return &biz.Symbol{
-		Id:              s.Id,
+		ID:              s.Id,
 		Project:         s.ProjectId,
-		Uid:             s.Uid,
+		UID:             s.Uid,
 		Label:           s.Label,
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
@@ -84,9 +85,9 @@ func toV1Symbol(s *biz.Symbol) *v1.Symbol {
 		data = *s.Data.Data
 	}
 	return &v1.Symbol{
-		Id:              s.Id,
+		Id:              s.ID,
 		ProjectId:       s.Project,
-		Uid:             s.Uid,
+		Uid:             s.UID,
 		Label:           s.Label,
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
@@ -96,9 +97,9 @@ func toV1Symbol(s *biz.Symbol) *v1.Symbol {
 }
 func toV1SymbolItem(s *biz.Symbol) *v1.SymbolItem {
 	return &v1.SymbolItem{
-		Id:              s.Id,
+		Id:              s.ID,
 		ProjectId:       s.Project,
-		Uid:             s.Uid,
+		Uid:             s.UID,
 		Label:           s.Label,
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,

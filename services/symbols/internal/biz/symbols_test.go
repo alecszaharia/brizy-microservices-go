@@ -112,7 +112,7 @@ func validSymbol() *Symbol {
 	bytes := []byte(`{"key": "value"}`)
 	return &Symbol{
 		Project:         1,
-		Uid:             "550e8400-e29b-41d4-a716-446655440000",
+		UID:             "550e8400-e29b-41d4-a716-446655440000",
 		Label:           "Test Symbol",
 		ClassName:       "TestClass",
 		ComponentTarget: "TestTarget",
@@ -134,15 +134,15 @@ func TestGetSymbol(t *testing.T) {
 			symbolID: 1,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
 				symbol := validSymbol()
-				symbol.Id = id
+				symbol.ID = id
 				repo.On("FindByID", ctx, id).Return(symbol, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, result *Symbol) {
 				assert.NotNil(t, result)
-				assert.Equal(t, uint64(1), result.Id)
+				assert.Equal(t, uint64(1), result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
-				assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", result.Uid)
+				assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", result.UID)
 			},
 		},
 		{
@@ -167,15 +167,15 @@ func TestGetSymbol(t *testing.T) {
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
 				bytes := []byte(`{"key": "value"}`)
 				symbol := &Symbol{
-					Id:              id,
+					ID:              id,
 					Project:         1,
-					Uid:             "550e8400-e29b-41d4-a716-446655440000",
+					UID:             "550e8400-e29b-41d4-a716-446655440000",
 					Label:           "Test Symbol",
 					ClassName:       "TestClass",
 					ComponentTarget: "TestTarget",
 					Version:         1,
 					Data: &SymbolData{
-						Id:      1,
+						ID:      1,
 						Project: 1,
 						Data:    &bytes,
 					},
@@ -186,7 +186,7 @@ func TestGetSymbol(t *testing.T) {
 			checkResult: func(t *testing.T, result *Symbol) {
 				assert.NotNil(t, result)
 				assert.NotNil(t, result.Data)
-				assert.Equal(t, uint64(1), result.Data.Id)
+				assert.Equal(t, uint64(1), result.Data.ID)
 			},
 		},
 		{
@@ -194,9 +194,9 @@ func TestGetSymbol(t *testing.T) {
 			symbolID: 1,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
 				symbol := &Symbol{
-					Id:              id,
+					ID:              id,
 					Project:         1,
-					Uid:             "550e8400-e29b-41d4-a716-446655440000",
+					UID:             "550e8400-e29b-41d4-a716-446655440000",
 					Label:           "Test Symbol",
 					ClassName:       "TestClass",
 					ComponentTarget: "TestTarget",
@@ -252,9 +252,9 @@ func TestCreateSymbol(t *testing.T) {
 			symbol: validSymbol(),
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
 				expectedSymbol := &Symbol{
-					Id:              1,
+					ID:              1,
 					Project:         symbol.Project,
-					Uid:             symbol.Uid,
+					UID:             symbol.UID,
 					Label:           symbol.Label,
 					ClassName:       symbol.ClassName,
 					ComponentTarget: symbol.ComponentTarget,
@@ -266,14 +266,14 @@ func TestCreateSymbol(t *testing.T) {
 			wantErr: false,
 			checkResult: func(t *testing.T, result *Symbol) {
 				assert.NotNil(t, result)
-				assert.Equal(t, uint64(1), result.Id)
+				assert.Equal(t, uint64(1), result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
 			},
 		},
 		{
 			name: "missing project",
 			symbol: &Symbol{
-				Uid:             "550e8400-e29b-41d4-a716-446655440000",
+				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test",
 				ClassName:       "Class",
 				ComponentTarget: "Target",
@@ -287,7 +287,7 @@ func TestCreateSymbol(t *testing.T) {
 			name: "invalid uuid",
 			symbol: &Symbol{
 				Project:         1,
-				Uid:             "invalid-uuid",
+				UID:             "invalid-uuid",
 				Label:           "Test",
 				ClassName:       "Class",
 				ComponentTarget: "Target",
@@ -295,13 +295,13 @@ func TestCreateSymbol(t *testing.T) {
 			},
 			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
 			wantErr:     true,
-			errContains: "Uid",
+			errContains: "UID",
 		},
 		{
 			name: "empty label",
 			symbol: &Symbol{
 				Project:         1,
-				Uid:             "550e8400-e29b-41d4-a716-446655440000",
+				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "",
 				ClassName:       "Class",
 				ComponentTarget: "Target",
@@ -315,7 +315,7 @@ func TestCreateSymbol(t *testing.T) {
 			name: "empty class name",
 			symbol: &Symbol{
 				Project:         1,
-				Uid:             "550e8400-e29b-41d4-a716-446655440000",
+				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test",
 				ClassName:       "",
 				ComponentTarget: "Target",
@@ -329,7 +329,7 @@ func TestCreateSymbol(t *testing.T) {
 			name: "empty component target",
 			symbol: &Symbol{
 				Project:         1,
-				Uid:             "550e8400-e29b-41d4-a716-446655440000",
+				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test",
 				ClassName:       "Class",
 				ComponentTarget: "",
@@ -343,7 +343,7 @@ func TestCreateSymbol(t *testing.T) {
 			name: "invalid version",
 			symbol: &Symbol{
 				Project:         1,
-				Uid:             "550e8400-e29b-41d4-a716-446655440000",
+				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test",
 				ClassName:       "Class",
 				ComponentTarget: "Target",
@@ -357,7 +357,7 @@ func TestCreateSymbol(t *testing.T) {
 			name: "label too long",
 			symbol: &Symbol{
 				Project:         1,
-				Uid:             "550e8400-e29b-41d4-a716-446655440000",
+				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           string(make([]byte, 256)),
 				ClassName:       "Class",
 				ComponentTarget: "Target",
@@ -388,9 +388,9 @@ func TestCreateSymbol(t *testing.T) {
 			}(),
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
 				expectedSymbol := &Symbol{
-					Id:              1,
+					ID:              1,
 					Project:         symbol.Project,
-					Uid:             symbol.Uid,
+					UID:             symbol.UID,
 					Label:           symbol.Label,
 					ClassName:       symbol.ClassName,
 					ComponentTarget: symbol.ComponentTarget,
@@ -463,7 +463,7 @@ func TestUpdateSymbol(t *testing.T) {
 			name: "success",
 			symbol: func() *Symbol {
 				s := validSymbol()
-				s.Id = 1
+				s.ID = 1
 				return s
 			}(),
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
@@ -472,14 +472,14 @@ func TestUpdateSymbol(t *testing.T) {
 			wantErr: false,
 			checkResult: func(t *testing.T, result *Symbol) {
 				assert.NotNil(t, result)
-				assert.Equal(t, uint64(1), result.Id)
+				assert.Equal(t, uint64(1), result.ID)
 			},
 		},
 		{
 			name: "validation error",
 			symbol: func() *Symbol {
 				s := validSymbol()
-				s.Id = 1
+				s.ID = 1
 				s.Label = "" // Invalid
 				return s
 			}(),
@@ -490,7 +490,7 @@ func TestUpdateSymbol(t *testing.T) {
 			name: "not found error",
 			symbol: func() *Symbol {
 				s := validSymbol()
-				s.Id = 999
+				s.ID = 999
 				return s
 			}(),
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
@@ -502,7 +502,7 @@ func TestUpdateSymbol(t *testing.T) {
 			name: "repository error",
 			symbol: func() *Symbol {
 				s := validSymbol()
-				s.Id = 1
+				s.ID = 1
 				return s
 			}(),
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
