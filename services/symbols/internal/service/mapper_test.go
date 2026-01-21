@@ -1,11 +1,11 @@
 package service
 
 import (
-	v1 "contracts/gen/symbols/v1"
+	v1 "contracts/gen/service/symbols/v1"
 	"platform/pagination"
 	"testing"
 
-	"symbols/internal/biz"
+	"symbols/internal/biz/domain"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -16,7 +16,7 @@ func Test_toBizSymbol(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *v1.Symbol
-		expected *biz.Symbol
+		expected *domain.Symbol
 	}{
 		{
 			name: "complete symbol conversion",
@@ -30,7 +30,7 @@ func Test_toBizSymbol(t *testing.T) {
 				Version:         1,
 				Data:            data,
 			},
-			expected: &biz.Symbol{
+			expected: &domain.Symbol{
 				ID:              123,
 				Project:         456,
 				UID:             "550e8400-e29b-41d4-a716-446655440000",
@@ -38,7 +38,7 @@ func Test_toBizSymbol(t *testing.T) {
 				ClassName:       "TestClass",
 				ComponentTarget: "web",
 				Version:         1,
-				Data: &biz.SymbolData{
+				Data: &domain.SymbolData{
 					Project: 456,
 					Data:    &data,
 				},
@@ -56,7 +56,7 @@ func Test_toBizSymbol(t *testing.T) {
 				Version:         1,
 				Data:            []byte{},
 			},
-			expected: &biz.Symbol{
+			expected: &domain.Symbol{
 				ID:              1,
 				Project:         2,
 				UID:             "550e8400-e29b-41d4-a716-446655440001",
@@ -64,7 +64,7 @@ func Test_toBizSymbol(t *testing.T) {
 				ClassName:       "EmptyClass",
 				ComponentTarget: "mobile",
 				Version:         1,
-				Data: &biz.SymbolData{
+				Data: &domain.SymbolData{
 					Project: 2,
 					Data:    &[]byte{},
 				},
@@ -97,7 +97,7 @@ func Test_toBizSymbolFromRequest(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *v1.CreateSymbolRequest
-		expected *biz.Symbol
+		expected *domain.Symbol
 	}{
 		{
 			name: "complete create request conversion",
@@ -110,14 +110,14 @@ func Test_toBizSymbolFromRequest(t *testing.T) {
 				Version:         1,
 				Data:            data,
 			},
-			expected: &biz.Symbol{
+			expected: &domain.Symbol{
 				Project:         789,
 				UID:             "550e8400-e29b-41d4-a716-446655440002",
 				Label:           "New Symbol",
 				ClassName:       "NewClass",
 				ComponentTarget: "desktop",
 				Version:         1,
-				Data: &biz.SymbolData{
+				Data: &domain.SymbolData{
 					Project: 789,
 					Data:    &data,
 				},
@@ -134,14 +134,14 @@ func Test_toBizSymbolFromRequest(t *testing.T) {
 				Version:         1,
 				Data:            []byte{},
 			},
-			expected: &biz.Symbol{
+			expected: &domain.Symbol{
 				Project:         1,
 				UID:             "550e8400-e29b-41d4-a716-446655440003",
 				Label:           "Min Symbol",
 				ClassName:       "MinClass",
 				ComponentTarget: "app",
 				Version:         1,
-				Data: &biz.SymbolData{
+				Data: &domain.SymbolData{
 					Project: 1,
 					Data:    &[]byte{},
 				},
@@ -172,12 +172,12 @@ func Test_toV1Symbol(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    *biz.Symbol
+		input    *domain.Symbol
 		expected *v1.Symbol
 	}{
 		{
 			name: "complete biz symbol to v1",
-			input: &biz.Symbol{
+			input: &domain.Symbol{
 				ID:              999,
 				Project:         888,
 				UID:             "550e8400-e29b-41d4-a716-446655440004",
@@ -185,7 +185,7 @@ func Test_toV1Symbol(t *testing.T) {
 				ClassName:       "ConvertedClass",
 				ComponentTarget: "universal",
 				Version:         1,
-				Data: &biz.SymbolData{
+				Data: &domain.SymbolData{
 					Project: 888,
 					Data:    &data,
 				},
@@ -203,7 +203,7 @@ func Test_toV1Symbol(t *testing.T) {
 		},
 		{
 			name: "biz symbol with nil data",
-			input: &biz.Symbol{
+			input: &domain.Symbol{
 				ID:              100,
 				Project:         200,
 				UID:             "550e8400-e29b-41d4-a716-446655440005",
@@ -226,7 +226,7 @@ func Test_toV1Symbol(t *testing.T) {
 		},
 		{
 			name: "biz symbol with empty data bytes",
-			input: &biz.Symbol{
+			input: &domain.Symbol{
 				ID:              101,
 				Project:         201,
 				UID:             "550e8400-e29b-41d4-a716-446655440006",
@@ -234,7 +234,7 @@ func Test_toV1Symbol(t *testing.T) {
 				ClassName:       "EmptyBytesClass",
 				ComponentTarget: "all",
 				Version:         1,
-				Data: &biz.SymbolData{
+				Data: &domain.SymbolData{
 					Project: 201,
 					Data:    &[]byte{},
 				},
@@ -273,7 +273,7 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 		name     string
 		input    *v1.ListSymbolsRequest
 		wantErr  bool
-		expected *biz.ListSymbolsOptions
+		expected *domain.ListSymbolsOptions
 	}{
 		{
 			name: "with offset and limit",
@@ -283,7 +283,7 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 				Limit:     20,
 			},
 			wantErr: false,
-			expected: &biz.ListSymbolsOptions{
+			expected: &domain.ListSymbolsOptions{
 				ProjectID: 1,
 				Pagination: pagination.OffsetPaginationParams{
 					Offset: 10,
@@ -299,7 +299,7 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 				Limit:     0,
 			},
 			wantErr: false,
-			expected: &biz.ListSymbolsOptions{
+			expected: &domain.ListSymbolsOptions{
 				ProjectID: 1,
 				Pagination: pagination.OffsetPaginationParams{
 					Offset: 0,
@@ -315,7 +315,7 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 				Limit:     10,
 			},
 			wantErr: false,
-			expected: &biz.ListSymbolsOptions{
+			expected: &domain.ListSymbolsOptions{
 				ProjectID: 1,
 				Pagination: pagination.OffsetPaginationParams{
 					Offset: 0,

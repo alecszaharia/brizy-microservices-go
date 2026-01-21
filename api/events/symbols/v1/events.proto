@@ -25,3 +25,33 @@ message SymbolCreated {
   // Timestamp when the symbol was created
   google.protobuf.Timestamp created_at = 8;
 }
+
+message SymbolUpdated {
+  // Unique identifier of the updated symbol
+  uint64 id = 1;
+  // Project the symbol belongs to
+  uint64 project_id = 2;
+  // Unique identifier within the project
+  string uid = 3;
+  // Human-readable label
+  string label = 4;
+  // CSS class name
+  string class_name = 5;
+  // Component target reference
+  string component_target = 6;
+  // Symbol version
+  uint32 version = 7;
+  // Timestamp when the symbol was updated
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message SymbolDeleted {
+  // Unique identifier of the deleted symbol
+  uint64 id = 1;
+  // Project the symbol belonged to
+  uint64 project_id = 2;
+  // Unique identifier within the project
+  string uid = 3;
+  // Timestamp when the symbol was deleted
+  google.protobuf.Timestamp deleted_at = 4;
+}

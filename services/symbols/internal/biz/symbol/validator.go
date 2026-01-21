@@ -1,12 +1,12 @@
-package biz
+// Package symbol provides validation for symbols.
+package symbol
 
 import (
 	"github.com/go-playground/validator/v10"
 )
 
-// ProviderSet is biz providers.
-
-func NewSymbolValidator() *validator.Validate {
+// NewValidator creates a new validator instance for Symbol validation.
+func NewValidator() *validator.Validate {
 	v := validator.New()
 
 	// add all custom validations here

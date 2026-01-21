@@ -2,7 +2,7 @@
 package server
 
 import (
-	v1 "contracts/gen/symbols/v1"
+	v1 "contracts/gen/service/symbols/v1"
 	"platform/metrics"
 	"platform/middleware"
 	"symbols/internal/conf/gen"

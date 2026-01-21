@@ -6,6 +6,7 @@ import (
 	"platform/events"
 	platform_logger "platform/logger"
 	"platform/metrics"
+	"symbols/internal/biz/domain"
 	"symbols/internal/conf/gen"
 	"symbols/internal/data/common"
 	"symbols/internal/data/model"
@@ -98,7 +99,7 @@ func NewAMQPPublisher(cfg *conf.Data, logger log.Logger, wmLogger *platform_logg
 	publisher, err := amqp.NewPublisher(amqpConfig, wmLogger)
 
 	if err != nil {
-		log.NewHelper(logger).Errorf("failed to create AMQP publisher: %v", err)
+		log.NewHelper(logger).Fatalf("failed to create AMQP publisher: %v", err)
 	}
 	return publisher
 }
@@ -128,24 +129,26 @@ func NewAMQPSubscriber(cfg *conf.Data, logger log.Logger, wmLogger *platform_log
 	subscriber, err := amqp.NewSubscriber(amqpConfig, wmLogger)
 
 	if err != nil {
-		log.NewHelper(logger).Errorf("failed to create AMQP subscriber: %v", err)
+		log.NewHelper(logger).Fatalf("failed to create AMQP subscriber: %v", err)
 	}
 	return subscriber
 }
 
-func (d *Data) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB) error) error {
+type txKey struct{}
+
+func (d *Data) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	return d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return fn(ctx, tx)
+		txCtx := context.WithValue(ctx, txKey{}, tx)
+		return fn(txCtx)
 	})
 }
 
 // NewEventPublisherWithMetrics wraps the base event publisher with metrics if enabled.
-func NewEventPublisherWithMetrics(pub message.Publisher, mc *conf.Metrics, reg *metrics.Registry, logger log.Logger) events.Publisher {
-	basePub := mq.NewEventPublisher(pub, logger)
-	if mc != nil && mc.Enabled.Value && reg != nil {
-		return metrics.NewPublisherWithMetrics(basePub, reg)
-	}
-	return basePub
+// Note: Currently returns the base publisher without metrics wrapping as the SymbolEventPublisher
+// interface methods (PublishSymbolCreated, etc.) are not part of the generic events.Publisher interface.
+// TODO: Create a dedicated metrics wrapper for SymbolEventPublisher if per-event-type metrics are needed.
+func NewEventPublisherWithMetrics(pub message.Publisher, mc *conf.Metrics, reg *metrics.Registry, logger log.Logger) domain.SymbolEventPublisher {
+	return mq.NewEventPublisher(pub, logger)
 }
 
 // NewEventSubscriberWithMetrics wraps the base event subscriber with metrics if enabled.

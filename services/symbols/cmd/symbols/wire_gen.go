@@ -11,7 +11,7 @@ import (
 	"github.com/go-kratos/kratos/v2/log"
 	"platform/build"
 	"platform/logger"
-	"symbols/internal/biz"
+	"symbols/internal/biz/symbol"
 	"symbols/internal/conf/gen"
 	"symbols/internal/data"
 	"symbols/internal/data/repo"
@@ -35,11 +35,11 @@ func wireApp(serviceBuildInfo *build.ServiceBuildInfo, confServer *conf.Server, 
 	}
 	transaction := data.NewTransaction(dataData)
 	symbolRepo := repo.NewSymbolRepo(db, transaction, logLogger)
-	validate := biz.NewSymbolValidator()
+	validate := symbol.NewValidator()
 	watermillLogger := logger.NewWatermillLogger(logLogger)
 	publisher := data.NewAMQPPublisher(confData, logLogger, watermillLogger)
-	eventsPublisher := data.NewEventPublisherWithMetrics(publisher, metrics, registry, logLogger)
-	symbolUseCase := biz.NewSymbolUseCase(symbolRepo, validate, transaction, eventsPublisher, logLogger)
+	symbolEventPublisher := data.NewEventPublisherWithMetrics(publisher, metrics, registry, logLogger)
+	symbolUseCase := symbol.NewUseCase(symbolRepo, validate, transaction, symbolEventPublisher, logLogger)
 	symbolService := service.NewSymbolService(symbolUseCase)
 	grpcServer := server.NewGRPCServer(confServer, metrics, registry, symbolService, logLogger)
 	httpServer := server.NewHTTPServer(confServer, metrics, registry, symbolService, logLogger)

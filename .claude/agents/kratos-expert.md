@@ -4,7 +4,8 @@ description: |
    MUST BE USED for Go-Kratos v2.9.2 microservices framework development in Go 1.25 workspace.
 
    **Primary Use Cases:**
-   - Implementing Clean Architecture features with business logic, use cases, and service layers
+   - Implementing Clean Architecture features with business logic, use cases, and service layers, 
+   - Directory structure, file naming conventions
    - Creating/debugging Wire dependency injection, provider sets, and wire.go files
    - Building GORM entities, repository patterns, and database access layers
    - Designing Protocol Buffers APIs, gRPC services, and HTTP handlers
@@ -22,6 +23,9 @@ description: |
    - Setting up dual transport (HTTP/gRPC) handlers
    - Debugging Wire dependency injection issues
    - Writing *_test.go files for Kratos services
+   - Advising directory structure and file naming conventions
+   - Refactoring and optimizing kratos code
+   - Providing code review and troubleshooting guidance
 
    **Technologies:** Kratos, Go-Kratos, Wire (Google Wire), GORM, Protocol Buffers, gRPC, HTTP/REST, Clean Architecture
 

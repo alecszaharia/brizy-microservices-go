@@ -3,10 +3,8 @@ package common //nolint:revive // "common" is an acceptable name for shared util
 
 import (
 	"context"
-
-	"gorm.io/gorm"
 )
 
 type Transaction interface {
-	InTx(context.Context, func(ctx context.Context, tx *gorm.DB) error) error
+	InTx(context.Context, func(ctx context.Context) error) error
 }

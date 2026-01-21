@@ -1,4 +1,5 @@
-package biz
+// Package domain provides interfaces for the business domain.
+package domain
 
 import (
 	"context"
@@ -40,4 +41,14 @@ type SymbolUseCase interface {
 
 	// ListSymbols lists Symbols based on the provided options and returns pagination metadata.
 	ListSymbols(ctx context.Context, params *pagination.OffsetPaginationParams, filter map[string]interface{}) ([]*Symbol, *pagination.Meta, error)
+}
+
+// SymbolEventPublisher defines the event publishing interface for Symbols.
+type SymbolEventPublisher interface {
+	// PublishSymbolCreated publishes a SymbolCreated event.
+	PublishSymbolCreated(ctx context.Context, symbol *Symbol) error
+	// PublishSymbolUpdated publishes a SymbolUpdated event.
+	PublishSymbolUpdated(ctx context.Context, symbol *Symbol) error
+	// PublishSymbolDeleted publishes a SymbolDeleted event.
+	PublishSymbolDeleted(ctx context.Context, symbol *Symbol) error
 }

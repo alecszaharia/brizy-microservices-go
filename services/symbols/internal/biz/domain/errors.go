@@ -1,11 +1,11 @@
-package biz
+package domain
 
 import "errors"
 
 // Domain-level errors (returned by business logic layer)
 var (
 	// ErrSymbolNotFound is returned when a symbol is not found in the repository.
-	// This should be returned from biz layer when the data layer returns ErrNotFound.
+	// This should be returned from biz layer when the data layer returns ErrDataNotFound.
 	ErrSymbolNotFound = errors.New("symbol not found")
 
 	// ErrInvalidID is returned when a symbol ID is invalid (e.g., zero or negative).
@@ -25,18 +25,18 @@ var (
 // Data layer errors (returned by repository implementations)
 // These errors abstract away GORM-specific errors to maintain clean architecture
 var (
-	// ErrNotFound indicates the requested record does not exist in the database.
+	// ErrDataNotFound indicates the requested record does not exist in the database.
 	// Data layer returns this instead of gorm.ErrRecordNotFound.
-	ErrNotFound = errors.New("record not found")
+	ErrDataNotFound = errors.New("record not found")
 
-	// ErrDuplicateEntry indicates a unique constraint violation.
+	// ErrDataDuplicateEntry indicates a unique constraint violation.
 	// Data layer returns this instead of MySQL duplicate key errors.
-	ErrDuplicateEntry = errors.New("duplicate entry")
+	ErrDataDuplicateEntry = errors.New("duplicate entry")
 
-	// ErrTransactionFailed indicates a transaction operation failed.
-	ErrTransactionFailed = errors.New("transaction failed")
+	// ErrDataTransactionFailed indicates a transaction operation failed.
+	ErrDataTransactionFailed = errors.New("transaction failed")
 
-	// ErrDatabase indicates a generic database operation error.
+	// ErrDataDatabase indicates a generic database operation error.
 	// Data layer wraps unexpected database errors with this.
-	ErrDatabase = errors.New("database error")
+	ErrDataDatabase = errors.New("database error")
 )

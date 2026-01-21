@@ -2,14 +2,14 @@
 package handlers
 
 import (
-	"symbols/internal/biz"
+	"symbols/internal/biz/domain"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/go-kratos/kratos/v2/log"
 )
 
 // NewLifecycleEventHandler creates a new lifecycle event handler
-func NewLifecycleEventHandler(symbolUC biz.SymbolUseCase, logger log.Logger) *LifecycleEventHandler {
+func NewLifecycleEventHandler(symbolUC domain.SymbolUseCase, logger log.Logger) *LifecycleEventHandler {
 	return &LifecycleEventHandler{
 		logger:   log.NewHelper(logger),
 		symbolUC: symbolUC,
@@ -18,7 +18,7 @@ func NewLifecycleEventHandler(symbolUC biz.SymbolUseCase, logger log.Logger) *Li
 
 type LifecycleEventHandler struct {
 	logger   *log.Helper
-	symbolUC biz.SymbolUseCase
+	symbolUC domain.SymbolUseCase
 }
 
 func (h *LifecycleEventHandler) Handle(msg *message.Message) error {

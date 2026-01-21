@@ -2,18 +2,18 @@ package service
 
 import (
 	"context"
+	v1 "contracts/gen/service/symbols/v1"
 
-	v1 "contracts/gen/symbols/v1"
-	"symbols/internal/biz"
+	"symbols/internal/biz/domain"
 )
 
 type SymbolService struct {
 	v1.UnimplementedSymbolsServiceServer
 
-	uc biz.SymbolUseCase
+	uc domain.SymbolUseCase
 }
 
-func NewSymbolService(uc biz.SymbolUseCase) *SymbolService {
+func NewSymbolService(uc domain.SymbolUseCase) *SymbolService {
 	return &SymbolService{uc: uc}
 }
 

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"platform/pagination"
 	"strings"
-	"symbols/internal/biz"
+	"symbols/internal/biz/domain"
 	"symbols/internal/data/common"
 	"symbols/internal/data/model"
 
@@ -15,7 +15,7 @@ import (
 )
 
 // NewSymbolRepo creates a new symbol repository implementation.
-func NewSymbolRepo(db *gorm.DB, tx common.Transaction, logger log.Logger) biz.SymbolRepo {
+func NewSymbolRepo(db *gorm.DB, tx common.Transaction, logger log.Logger) domain.SymbolRepo {
 	return &symbolRepo{
 		db:  db,
 		tx:  tx,
@@ -29,7 +29,7 @@ type symbolRepo struct {
 	log *log.Helper
 }
 
-func (r *symbolRepo) Create(ctx context.Context, s *biz.Symbol) (*biz.Symbol, error) {
+func (r *symbolRepo) Create(ctx context.Context, s *domain.Symbol) (*domain.Symbol, error) {
 
 	symbol := toEntitySymbol(s)
 
@@ -41,7 +41,7 @@ func (r *symbolRepo) Create(ctx context.Context, s *biz.Symbol) (*biz.Symbol, er
 	return toDomainSymbol(symbol), nil
 }
 
-func (r *symbolRepo) Update(ctx context.Context, symbol *biz.Symbol) (*biz.Symbol, error) {
+func (r *symbolRepo) Update(ctx context.Context, symbol *domain.Symbol) (*domain.Symbol, error) {
 
 	// Transform to entity
 	entity := toEntitySymbol(symbol)
@@ -52,14 +52,14 @@ func (r *symbolRepo) Update(ctx context.Context, symbol *biz.Symbol) (*biz.Symbo
 		return nil, r.mapGormError(result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return nil, biz.ErrNotFound
+		return nil, domain.ErrDataNotFound
 	}
 
 	// Fetch updated symbol with data
 	return r.FindByID(ctx, symbol.ID)
 }
 
-func (r *symbolRepo) FindByID(ctx context.Context, id uint64) (*biz.Symbol, error) {
+func (r *symbolRepo) FindByID(ctx context.Context, id uint64) (*domain.Symbol, error) {
 	var symbol *model.Symbol
 
 	err := r.db.WithContext(ctx).
@@ -74,7 +74,7 @@ func (r *symbolRepo) FindByID(ctx context.Context, id uint64) (*biz.Symbol, erro
 	return toDomainSymbol(symbol), nil
 }
 
-func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*biz.Symbol, *pagination.Meta, error) {
+func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*domain.Symbol, *pagination.Meta, error) {
 	var symbolEntities []*model.Symbol
 	var totalCount int64
 
@@ -99,7 +99,7 @@ func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint3
 	}
 
 	// Transform entities to domain objects
-	symbols := make([]*biz.Symbol, 0, len(symbolEntities))
+	symbols := make([]*domain.Symbol, 0, len(symbolEntities))
 	for _, entity := range symbolEntities {
 		symbols = append(symbols, toDomainSymbol(entity))
 	}
@@ -126,7 +126,7 @@ func (r *symbolRepo) Delete(ctx context.Context, id uint64) error {
 	}
 
 	if result.RowsAffected == 0 {
-		return biz.ErrNotFound
+		return domain.ErrDataNotFound
 	}
 
 	return nil
@@ -142,16 +142,16 @@ func (r *symbolRepo) mapGormError(err error) error {
 
 	// Check for GORM-specific errors
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return biz.ErrNotFound
+		return domain.ErrDataNotFound
 	}
 
 	// Check for duplicate key constraint violations
 	if r.isDuplicateKeyError(err) {
-		return biz.ErrDuplicateEntry
+		return domain.ErrDataDuplicateEntry
 	}
 
 	// Wrap other database errors
-	return biz.ErrDatabase
+	return domain.ErrDataDatabase
 }
 
 // isDuplicateKeyError checks if error is a duplicate key violation
@@ -162,13 +162,13 @@ func (r *symbolRepo) isDuplicateKeyError(err error) bool {
 		strings.Contains(errMsg, "UNIQUE constraint failed")
 }
 
-// toDomainSymbol converts a model.Symbol entity to its corresponding biz.Symbol domain object.
-func toDomainSymbol(s *model.Symbol) *biz.Symbol {
+// toDomainSymbol converts a model.Symbol entity to its corresponding domain.Symbol domain object.
+func toDomainSymbol(s *model.Symbol) *domain.Symbol {
 	if s == nil {
 		return nil
 	}
 
-	d := &biz.Symbol{
+	d := &domain.Symbol{
 		ID:              s.ID,
 		Project:         s.ProjectID,
 		UID:             s.UID,
@@ -179,7 +179,7 @@ func toDomainSymbol(s *model.Symbol) *biz.Symbol {
 	}
 
 	if s.SymbolData != nil {
-		d.Data = &biz.SymbolData{
+		d.Data = &domain.SymbolData{
 			ID:      s.SymbolData.ID,
 			Project: s.ProjectID,
 			Data:    s.SymbolData.Data,
@@ -189,9 +189,9 @@ func toDomainSymbol(s *model.Symbol) *biz.Symbol {
 	return d
 }
 
-// toEntitySymbol transforms a *biz.Symbol domain object into a *model.Symbol persistence object.
+// toEntitySymbol transforms a *domain.Symbol domain object into a *model.Symbol persistence object.
 // Returns nil if the input is nil.
-func toEntitySymbol(s *biz.Symbol) *model.Symbol {
+func toEntitySymbol(s *domain.Symbol) *model.Symbol {
 	if s == nil {
 		return nil
 	}

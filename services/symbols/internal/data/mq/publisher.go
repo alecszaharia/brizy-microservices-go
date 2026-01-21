@@ -4,18 +4,21 @@ package mq
 import (
 	"context"
 	"fmt"
-	"platform/events"
 	middleware2 "platform/middleware"
+	"symbols/internal/biz/domain"
+	"symbols/internal/biz/event"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/go-kratos/kratos/v2/log"
+	"google.golang.org/protobuf/proto"
 )
 
 const RoutingKey = "routing_key"
 
-func NewEventPublisher(pub message.Publisher, logger log.Logger) events.Publisher {
+func NewEventPublisher(pub message.Publisher, logger log.Logger) domain.SymbolEventPublisher {
 	return &eventPublisher{
 		pub:    pub,
 		logger: log.NewHelper(logger),
@@ -61,6 +64,57 @@ func (ep *eventPublisher) Publish(ctx context.Context, topic string, payload []b
 	}
 
 	return nil
+}
+
+func (ep *eventPublisher) PublishSymbolCreated(ctx context.Context, symbol *domain.Symbol) error {
+	// Convert to event proto using mapper
+	evt := event.ToSymbolCreatedEvent(symbol, time.Now())
+	if evt == nil {
+		return fmt.Errorf("failed to convert symbol to created event: symbol is nil")
+	}
+
+	// Marshal proto to bytes
+	payload, err := proto.Marshal(evt)
+	if err != nil {
+		return fmt.Errorf("failed to marshal symbol created event: %w", err)
+	}
+
+	// Publish using base publisher (handles context, correlation ID, logging)
+	return ep.Publish(ctx, event.SymbolCreatedTopic, payload)
+}
+
+func (ep *eventPublisher) PublishSymbolUpdated(ctx context.Context, symbol *domain.Symbol) error {
+	// Convert to event proto using mapper
+	evt := event.ToSymbolUpdatedEvent(symbol, time.Now())
+	if evt == nil {
+		return fmt.Errorf("failed to convert symbol to updated event: symbol is nil")
+	}
+
+	// Marshal proto to bytes
+	payload, err := proto.Marshal(evt)
+	if err != nil {
+		return fmt.Errorf("failed to marshal symbol updated event: %w", err)
+	}
+
+	// Publish using base publisher (handles context, correlation ID, logging)
+	return ep.Publish(ctx, event.SymbolUpdatedTopic, payload)
+}
+
+func (ep *eventPublisher) PublishSymbolDeleted(ctx context.Context, symbol *domain.Symbol) error {
+	// Convert to event proto using mapper
+	evt := event.ToSymbolDeletedEvent(symbol, time.Now())
+	if evt == nil {
+		return fmt.Errorf("failed to convert symbol to deleted event: symbol is nil")
+	}
+
+	// Marshal proto to bytes
+	payload, err := proto.Marshal(evt)
+	if err != nil {
+		return fmt.Errorf("failed to marshal symbol deleted event: %w", err)
+	}
+
+	// Publish using base publisher (handles context, correlation ID, logging)
+	return ep.Publish(ctx, event.SymbolDeletedTopic, payload)
 }
 
 func SetMessageRoutingKey(key string, msg *message.Message) {

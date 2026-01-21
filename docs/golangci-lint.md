@@ -129,6 +129,80 @@ The configuration enables a curated set of linters organized by category:
 - `rowserrcheck` - SQL rows.Err()
 - `sqlclosecheck` - SQL Close() calls
 
+**Architecture:**
+- `depguard` - Clean architecture import boundary enforcement
+
+### Clean Architecture Import Rules
+
+The `depguard` linter enforces clean architecture boundaries by preventing invalid imports between layers. This ensures the codebase maintains proper dependency direction and separation of concerns.
+
+#### Layer Hierarchy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ server/worker (outermost - transport setup)                 │
+│ ✅ Can import: service, conf, platform, contracts           │
+│ ❌ Cannot import: biz, data                                 │
+├─────────────────────────────────────────────────────────────┤
+│ handlers (event handlers for async processing)              │
+│ ✅ Can import: biz/domain, platform                         │
+│ ❌ Cannot import: data, service, server, contracts          │
+├─────────────────────────────────────────────────────────────┤
+│ service (gRPC/HTTP handlers, mappers)                       │
+│ ✅ Can import: biz/domain, contracts, platform              │
+│ ❌ Cannot import: data, server, biz/{entity}                │
+├─────────────────────────────────────────────────────────────┤
+│ biz/{entity} (use cases)                                    │
+│ ✅ Can import: biz/domain, biz/event, data/common, platform │
+│ ❌ Cannot import: data/repo, data/model, service, server    │
+├─────────────────────────────────────────────────────────────┤
+│ biz/domain (innermost - interfaces, models, errors)         │
+│ ✅ Can import: platform, standard library                   │
+│ ❌ Cannot import: data, service, server, contracts          │
+├─────────────────────────────────────────────────────────────┤
+│ data (repositories, ORM, message queues)                    │
+│ ✅ Can import: biz/domain, biz/event, data/*, platform      │
+│ ❌ Cannot import: biz/{entity}, service, server             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Key Principles
+
+1. **Dependency Inversion**: Inner layers define interfaces, outer layers implement them
+2. **Domain Independence**: Business domain (`biz/domain`) has no external dependencies
+3. **Use Case Isolation**: Use cases (`biz/{entity}`) depend only on domain interfaces
+4. **Infrastructure Separation**: Data access (`data/`) implements domain interfaces
+5. **Transport Agnosticism**: Service layer handles proto/HTTP concerns, not business logic
+
+#### Example Violation Detection
+
+When a developer accidentally imports the data layer from the service layer:
+
+```
+internal/service/symbols.go:5:2: import "symbols/internal/data/model" is not allowed:
+service layer cannot import data layer - violates clean architecture (depguard)
+```
+
+#### Allowed Exceptions
+
+The following cross-layer imports are explicitly allowed:
+
+- `biz/{entity}` → `data/common`: Transaction interface abstraction
+- `biz/{entity}` → `biz/event`: Event topic definitions and mappers
+- `biz/event` → `contracts`: Event mappers produce protobuf event payloads
+- `data/*` → `biz/event`: Event mapping for pub/sub
+- `data/*` → `biz/domain`: Domain interfaces and models
+
+**Note:** The `biz/event` package is a bridge between domain and infrastructure. It converts domain models to protobuf events for publishing via message queues, so it legitimately needs to import event contracts.
+
+#### Configuring for New Services
+
+When creating a new service, update the `depguard` rules in `.golangci.yml`:
+
+1. Copy the depguard configuration from an existing service
+2. Replace the module name (`symbols`) with your service name
+3. Adjust rules if your service has different layer structure
+
 ### Exclusions
 
 The following are automatically excluded from linting:

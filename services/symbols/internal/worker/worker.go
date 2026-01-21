@@ -97,7 +97,7 @@ func (w *worker) Stop() HookFunc {
 	}
 }
 
-func NewRouter(cfg *conf.Data, lifecycleHandler *handlers.LifecycleEventHandler, eventPub events.Publisher, eventSub events.Subscriber, logger *platform_logger.WatermillLogger) *message.Router {
+func NewRouter(cfg *conf.Data, lifecycleHandler *handlers.LifecycleEventHandler, eventSub events.Subscriber, logger *platform_logger.WatermillLogger) *message.Router {
 
 	router, err := message.NewRouter(message.RouterConfig{}, logger)
 

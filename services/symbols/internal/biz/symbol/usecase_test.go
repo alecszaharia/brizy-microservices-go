@@ -1,4 +1,5 @@
-package biz
+// Package symbol provides tests for use cases for managing symbols.
+package symbol
 
 import (
 	"context"
@@ -6,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"platform/pagination"
+	"symbols/internal/biz/domain"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -13,7 +15,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"gorm.io/gorm"
 )
 
 // MockSymbolRepo is a mock implementation of SymbolRepo for testing
@@ -39,39 +40,54 @@ func (m *MockPublisher) Unwrap() message.Publisher {
 	return args.Get(0).(message.Publisher)
 }
 
-func (m *MockSymbolRepo) Create(ctx context.Context, symbol *Symbol) (*Symbol, error) {
+func (m *MockPublisher) PublishSymbolCreated(ctx context.Context, symbol *domain.Symbol) error {
+	args := m.Called(ctx, symbol)
+	return args.Error(0)
+}
+
+func (m *MockPublisher) PublishSymbolUpdated(ctx context.Context, symbol *domain.Symbol) error {
+	args := m.Called(ctx, symbol)
+	return args.Error(0)
+}
+
+func (m *MockPublisher) PublishSymbolDeleted(ctx context.Context, symbol *domain.Symbol) error {
+	args := m.Called(ctx, symbol)
+	return args.Error(0)
+}
+
+func (m *MockSymbolRepo) Create(ctx context.Context, symbol *domain.Symbol) (*domain.Symbol, error) {
 	args := m.Called(ctx, symbol)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*Symbol), args.Error(1)
+	return args.Get(0).(*domain.Symbol), args.Error(1)
 }
 
-func (m *MockSymbolRepo) Update(ctx context.Context, symbol *Symbol) (*Symbol, error) {
+func (m *MockSymbolRepo) Update(ctx context.Context, symbol *domain.Symbol) (*domain.Symbol, error) {
 	args := m.Called(ctx, symbol)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*Symbol), args.Error(1)
+	return args.Get(0).(*domain.Symbol), args.Error(1)
 }
 
-func (m *MockSymbolRepo) FindByID(ctx context.Context, id uint64) (*Symbol, error) {
+func (m *MockSymbolRepo) FindByID(ctx context.Context, id uint64) (*domain.Symbol, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*Symbol), args.Error(1)
+	return args.Get(0).(*domain.Symbol), args.Error(1)
 }
 
-func (m *MockSymbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*Symbol, *pagination.Meta, error) {
+func (m *MockSymbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*domain.Symbol, *pagination.Meta, error) {
 	args := m.Called(ctx, offset, limit, filter)
 	if args.Get(0) == nil {
 		return nil, nil, args.Error(2)
 	}
 	if args.Get(1) == nil {
-		return args.Get(0).([]*Symbol), nil, args.Error(2)
+		return args.Get(0).([]*domain.Symbol), nil, args.Error(2)
 	}
-	return args.Get(0).([]*Symbol), args.Get(1).(*pagination.Meta), args.Error(2)
+	return args.Get(0).([]*domain.Symbol), args.Get(1).(*pagination.Meta), args.Error(2)
 }
 
 func (m *MockSymbolRepo) Delete(ctx context.Context, id uint64) error {
@@ -84,40 +100,71 @@ type MockTransaction struct {
 	mock.Mock
 }
 
-func (m *MockTransaction) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB) error) error {
+func (m *MockTransaction) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	args := m.Called(ctx, fn)
 	if args.Error(0) != nil {
 		return args.Error(0)
 	}
 	// Execute the callback immediately without a real transaction
-	return fn(ctx, nil)
+	return fn(ctx)
 }
 
-// Helper function to create a test SymbolUseCase
-func setupSymbolUseCase(mockRepo *MockSymbolRepo) SymbolUseCase {
+// testDeps holds all mock dependencies for testing
+type testDeps struct {
+	repo *MockSymbolRepo
+	pub  *MockPublisher
+	tx   *MockTransaction
+	uc   domain.SymbolUseCase
+}
+
+// setupSymbolUseCaseWithDeps creates a test SymbolUseCase and returns all dependencies for assertions
+func setupSymbolUseCaseWithDeps() *testDeps {
 	logger := log.NewStdLogger(os.Stdout)
-	v := NewSymbolValidator()
+	v := NewValidator()
+	mockRepo := new(MockSymbolRepo)
 	mockPub := new(MockPublisher)
 	mockTx := new(MockTransaction)
 
-	// Allow any Publish calls to succeed by default
-	mockPub.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	// Default transaction behavior - executes the callback
 	mockTx.On("InTx", mock.Anything, mock.Anything).Return(nil).Maybe()
 
-	return NewSymbolUseCase(mockRepo, v, mockTx, mockPub, logger)
+	uc := NewUseCase(mockRepo, v, mockTx, mockPub, logger)
+
+	return &testDeps{
+		repo: mockRepo,
+		pub:  mockPub,
+		tx:   mockTx,
+		uc:   uc,
+	}
+}
+
+// Helper function to create a test SymbolUseCase (legacy - for tests that don't need publisher assertions)
+func setupSymbolUseCase(mockRepo *MockSymbolRepo) domain.SymbolUseCase {
+	logger := log.NewStdLogger(os.Stdout)
+	v := NewValidator()
+	mockPub := new(MockPublisher)
+	mockTx := new(MockTransaction)
+
+	// Allow any event publishing calls to succeed by default
+	mockPub.On("PublishSymbolCreated", mock.Anything, mock.Anything).Return(nil).Maybe()
+	mockPub.On("PublishSymbolUpdated", mock.Anything, mock.Anything).Return(nil).Maybe()
+	mockPub.On("PublishSymbolDeleted", mock.Anything, mock.Anything).Return(nil).Maybe()
+	mockTx.On("InTx", mock.Anything, mock.Anything).Return(nil).Maybe()
+
+	return NewUseCase(mockRepo, v, mockTx, mockPub, logger)
 }
 
 // Helper function to create a valid Symbol for testing
-func validSymbol() *Symbol {
+func validSymbol() *domain.Symbol {
 	bytes := []byte(`{"key": "value"}`)
-	return &Symbol{
+	return &domain.Symbol{
 		Project:         1,
 		UID:             "550e8400-e29b-41d4-a716-446655440000",
 		Label:           "Test Symbol",
 		ClassName:       "TestClass",
 		ComponentTarget: "TestTarget",
 		Version:         1,
-		Data:            &SymbolData{Project: 1, Data: &bytes},
+		Data:            &domain.SymbolData{Project: 1, Data: &bytes},
 	}
 }
 
@@ -127,7 +174,7 @@ func TestGetSymbol(t *testing.T) {
 		symbolID    uint64
 		mockSetup   func(*MockSymbolRepo, context.Context, uint64)
 		wantErr     bool
-		checkResult func(*testing.T, *Symbol)
+		checkResult func(*testing.T, *domain.Symbol)
 	}{
 		{
 			name:     "success",
@@ -138,7 +185,7 @@ func TestGetSymbol(t *testing.T) {
 				repo.On("FindByID", ctx, id).Return(symbol, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.Equal(t, uint64(1), result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
@@ -149,7 +196,7 @@ func TestGetSymbol(t *testing.T) {
 			name:     "not found",
 			symbolID: 999,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
-				repo.On("FindByID", ctx, id).Return(nil, ErrNotFound)
+				repo.On("FindByID", ctx, id).Return(nil, domain.ErrDataNotFound)
 			},
 			wantErr: true,
 		},
@@ -157,7 +204,7 @@ func TestGetSymbol(t *testing.T) {
 			name:     "repository error",
 			symbolID: 1,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
-				repo.On("FindByID", ctx, id).Return(nil, fmt.Errorf("%w: connection failed", ErrDatabase))
+				repo.On("FindByID", ctx, id).Return(nil, fmt.Errorf("%w: connection failed", domain.ErrDataDatabase))
 			},
 			wantErr: true,
 		},
@@ -166,7 +213,7 @@ func TestGetSymbol(t *testing.T) {
 			symbolID: 1,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
 				bytes := []byte(`{"key": "value"}`)
-				symbol := &Symbol{
+				symbol := &domain.Symbol{
 					ID:              id,
 					Project:         1,
 					UID:             "550e8400-e29b-41d4-a716-446655440000",
@@ -174,7 +221,7 @@ func TestGetSymbol(t *testing.T) {
 					ClassName:       "TestClass",
 					ComponentTarget: "TestTarget",
 					Version:         1,
-					Data: &SymbolData{
+					Data: &domain.SymbolData{
 						ID:      1,
 						Project: 1,
 						Data:    &bytes,
@@ -183,7 +230,7 @@ func TestGetSymbol(t *testing.T) {
 				repo.On("FindByID", ctx, id).Return(symbol, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.NotNil(t, result.Data)
 				assert.Equal(t, uint64(1), result.Data.ID)
@@ -193,7 +240,7 @@ func TestGetSymbol(t *testing.T) {
 			name:     "without symbol data",
 			symbolID: 1,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
-				symbol := &Symbol{
+				symbol := &domain.Symbol{
 					ID:              id,
 					Project:         1,
 					UID:             "550e8400-e29b-41d4-a716-446655440000",
@@ -206,7 +253,7 @@ func TestGetSymbol(t *testing.T) {
 				repo.On("FindByID", ctx, id).Return(symbol, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.Nil(t, result.Data)
 			},
@@ -241,17 +288,17 @@ func TestGetSymbol(t *testing.T) {
 func TestCreateSymbol(t *testing.T) {
 	tests := []struct {
 		name        string
-		symbol      *Symbol
-		mockSetup   func(*MockSymbolRepo, context.Context, *Symbol)
+		symbol      *domain.Symbol
+		mockSetup   func(*MockSymbolRepo, context.Context, *domain.Symbol)
 		wantErr     bool
 		errContains string
-		checkResult func(*testing.T, *Symbol)
+		checkResult func(*testing.T, *domain.Symbol)
 	}{
 		{
 			name:   "success",
 			symbol: validSymbol(),
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
-				expectedSymbol := &Symbol{
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {
+				expectedSymbol := &domain.Symbol{
 					ID:              1,
 					Project:         symbol.Project,
 					UID:             symbol.UID,
@@ -261,10 +308,10 @@ func TestCreateSymbol(t *testing.T) {
 					Version:         symbol.Version,
 					Data:            symbol.Data,
 				}
-				repo.On("Create", ctx, mock.AnythingOfType("*biz.Symbol")).Return(expectedSymbol, nil)
+				repo.On("Create", ctx, mock.AnythingOfType("*domain.Symbol")).Return(expectedSymbol, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.Equal(t, uint64(1), result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
@@ -272,20 +319,20 @@ func TestCreateSymbol(t *testing.T) {
 		},
 		{
 			name: "missing project",
-			symbol: &Symbol{
+			symbol: &domain.Symbol{
 				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test",
 				ClassName:       "Class",
 				ComponentTarget: "Target",
 				Version:         1,
 			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:     true,
 			errContains: "Project",
 		},
 		{
 			name: "invalid uuid",
-			symbol: &Symbol{
+			symbol: &domain.Symbol{
 				Project:         1,
 				UID:             "invalid-uuid",
 				Label:           "Test",
@@ -293,13 +340,13 @@ func TestCreateSymbol(t *testing.T) {
 				ComponentTarget: "Target",
 				Version:         1,
 			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:     true,
 			errContains: "UID",
 		},
 		{
 			name: "empty label",
-			symbol: &Symbol{
+			symbol: &domain.Symbol{
 				Project:         1,
 				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "",
@@ -307,13 +354,13 @@ func TestCreateSymbol(t *testing.T) {
 				ComponentTarget: "Target",
 				Version:         1,
 			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:     true,
 			errContains: "Label",
 		},
 		{
 			name: "empty class name",
-			symbol: &Symbol{
+			symbol: &domain.Symbol{
 				Project:         1,
 				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test",
@@ -321,13 +368,13 @@ func TestCreateSymbol(t *testing.T) {
 				ComponentTarget: "Target",
 				Version:         1,
 			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:     true,
 			errContains: "ClassName",
 		},
 		{
 			name: "empty component target",
-			symbol: &Symbol{
+			symbol: &domain.Symbol{
 				Project:         1,
 				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test",
@@ -335,13 +382,13 @@ func TestCreateSymbol(t *testing.T) {
 				ComponentTarget: "",
 				Version:         1,
 			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:     true,
 			errContains: "ComponentTarget",
 		},
 		{
 			name: "invalid version",
-			symbol: &Symbol{
+			symbol: &domain.Symbol{
 				Project:         1,
 				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           "Test",
@@ -349,13 +396,13 @@ func TestCreateSymbol(t *testing.T) {
 				ComponentTarget: "Target",
 				Version:         0,
 			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:     true,
 			errContains: "Version",
 		},
 		{
 			name: "label too long",
-			symbol: &Symbol{
+			symbol: &domain.Symbol{
 				Project:         1,
 				UID:             "550e8400-e29b-41d4-a716-446655440000",
 				Label:           string(make([]byte, 256)),
@@ -363,31 +410,31 @@ func TestCreateSymbol(t *testing.T) {
 				ComponentTarget: "Target",
 				Version:         1,
 			},
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:     true,
 			errContains: "Label",
 		},
 		{
 			name:   "repository error",
 			symbol: validSymbol(),
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
-				repo.On("Create", ctx, mock.AnythingOfType("*biz.Symbol")).Return(nil, fmt.Errorf("%w: connection failed", ErrDatabase))
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {
+				repo.On("Create", ctx, mock.AnythingOfType("*domain.Symbol")).Return(nil, fmt.Errorf("%w: connection failed", domain.ErrDataDatabase))
 			},
 			wantErr: true,
 		},
 		{
 			name: "with symbol data",
-			symbol: func() *Symbol {
+			symbol: func() *domain.Symbol {
 				s := validSymbol()
 				bytes := []byte(`{"key": "value"}`)
-				s.Data = &SymbolData{
+				s.Data = &domain.SymbolData{
 					Project: 1,
 					Data:    &bytes,
 				}
 				return s
 			}(),
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
-				expectedSymbol := &Symbol{
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {
+				expectedSymbol := &domain.Symbol{
 					ID:              1,
 					Project:         symbol.Project,
 					UID:             symbol.UID,
@@ -397,10 +444,10 @@ func TestCreateSymbol(t *testing.T) {
 					Version:         symbol.Version,
 					Data:            symbol.Data,
 				}
-				repo.On("Create", ctx, mock.AnythingOfType("*biz.Symbol")).Return(expectedSymbol, nil)
+				repo.On("Create", ctx, mock.AnythingOfType("*domain.Symbol")).Return(expectedSymbol, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.NotNil(t, result.Data)
 				assert.Equal(t, result.Data.Data, result.Data.Data)
@@ -408,16 +455,16 @@ func TestCreateSymbol(t *testing.T) {
 		},
 		{
 			name: "symbol data validation error",
-			symbol: func() *Symbol {
+			symbol: func() *domain.Symbol {
 				s := validSymbol()
 				bytes := []byte(`{"key": "value"}`)
-				s.Data = &SymbolData{
+				s.Data = &domain.SymbolData{
 					Project: 0, // Invalid
 					Data:    &bytes,
 				}
 				return s
 			}(),
-			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup:   func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:     true,
 			errContains: "Project",
 		},
@@ -454,59 +501,59 @@ func TestCreateSymbol(t *testing.T) {
 func TestUpdateSymbol(t *testing.T) {
 	tests := []struct {
 		name        string
-		symbol      *Symbol
-		mockSetup   func(*MockSymbolRepo, context.Context, *Symbol)
+		symbol      *domain.Symbol
+		mockSetup   func(*MockSymbolRepo, context.Context, *domain.Symbol)
 		wantErr     bool
-		checkResult func(*testing.T, *Symbol)
+		checkResult func(*testing.T, *domain.Symbol)
 	}{
 		{
 			name: "success",
-			symbol: func() *Symbol {
+			symbol: func() *domain.Symbol {
 				s := validSymbol()
 				s.ID = 1
 				return s
 			}(),
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
-				repo.On("Update", ctx, mock.AnythingOfType("*biz.Symbol")).Return(symbol, nil)
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {
+				repo.On("Update", ctx, mock.AnythingOfType("*domain.Symbol")).Return(symbol, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.Equal(t, uint64(1), result.ID)
 			},
 		},
 		{
 			name: "validation error",
-			symbol: func() *Symbol {
+			symbol: func() *domain.Symbol {
 				s := validSymbol()
 				s.ID = 1
 				s.Label = "" // Invalid
 				return s
 			}(),
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {},
 			wantErr:   true,
 		},
 		{
 			name: "not found error",
-			symbol: func() *Symbol {
+			symbol: func() *domain.Symbol {
 				s := validSymbol()
 				s.ID = 999
 				return s
 			}(),
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
-				repo.On("Update", ctx, mock.AnythingOfType("*biz.Symbol")).Return(nil, ErrNotFound)
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {
+				repo.On("Update", ctx, mock.AnythingOfType("*domain.Symbol")).Return(nil, domain.ErrDataNotFound)
 			},
 			wantErr: true,
 		},
 		{
 			name: "repository error",
-			symbol: func() *Symbol {
+			symbol: func() *domain.Symbol {
 				s := validSymbol()
 				s.ID = 1
 				return s
 			}(),
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *Symbol) {
-				repo.On("Update", ctx, mock.AnythingOfType("*biz.Symbol")).Return(nil, fmt.Errorf("%w: connection failed", ErrDatabase))
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, symbol *domain.Symbol) {
+				repo.On("Update", ctx, mock.AnythingOfType("*domain.Symbol")).Return(nil, fmt.Errorf("%w: connection failed", domain.ErrDataDatabase))
 			},
 			wantErr: true,
 		},
@@ -549,6 +596,9 @@ func TestDeleteSymbol(t *testing.T) {
 			name:     "success",
 			symbolID: 1,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
+				symbol := validSymbol()
+				symbol.ID = id
+				repo.On("FindByID", ctx, id).Return(symbol, nil)
 				repo.On("Delete", ctx, id).Return(nil)
 			},
 			wantErr: false,
@@ -561,18 +611,21 @@ func TestDeleteSymbol(t *testing.T) {
 			errContains: "invalid symbol ID",
 		},
 		{
-			name:     "not found error",
+			name:     "not found error on find",
 			symbolID: 999,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
-				repo.On("Delete", ctx, id).Return(ErrNotFound)
+				repo.On("FindByID", ctx, id).Return(nil, domain.ErrDataNotFound)
 			},
 			wantErr: true,
 		},
 		{
-			name:     "repository error",
+			name:     "repository error on delete",
 			symbolID: 1,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, id uint64) {
-				repo.On("Delete", ctx, id).Return(fmt.Errorf("%w: connection failed", ErrDatabase))
+				symbol := validSymbol()
+				symbol.ID = id
+				repo.On("FindByID", ctx, id).Return(symbol, nil)
+				repo.On("Delete", ctx, id).Return(fmt.Errorf("%w: connection failed", domain.ErrDataDatabase))
 			},
 			wantErr: true,
 		},
@@ -610,7 +663,7 @@ func TestListSymbols(t *testing.T) {
 		mockSetup   func(*MockSymbolRepo, context.Context, uint64, uint32, map[string]interface{})
 		wantErr     bool
 		errContains string
-		checkResult func(*testing.T, []*Symbol, *pagination.Meta)
+		checkResult func(*testing.T, []*domain.Symbol, *pagination.Meta)
 	}{
 		{
 			name: "success - first page",
@@ -621,7 +674,7 @@ func TestListSymbols(t *testing.T) {
 			filter: map[string]interface{}{"project_id": uint64(1)},
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
 				symbol := validSymbol()
-				expectedSymbols := []*Symbol{symbol}
+				expectedSymbols := []*domain.Symbol{symbol}
 				expectedMeta := &pagination.Meta{
 					TotalCount:      1,
 					Offset:          0,
@@ -632,7 +685,7 @@ func TestListSymbols(t *testing.T) {
 				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.NotNil(t, symbols)
 				assert.Len(t, symbols, 1)
 				assert.NotNil(t, meta)
@@ -651,7 +704,7 @@ func TestListSymbols(t *testing.T) {
 			},
 			filter: map[string]interface{}{"project_id": uint64(1)},
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
-				symbols := make([]*Symbol, 10)
+				symbols := make([]*domain.Symbol, 10)
 				for i := 0; i < 10; i++ {
 					symbols[i] = validSymbol()
 				}
@@ -665,7 +718,7 @@ func TestListSymbols(t *testing.T) {
 				repo.On("ListSymbols", ctx, offset, limit, filter).Return(symbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.NotNil(t, symbols)
 				assert.Len(t, symbols, 10)
 				assert.NotNil(t, meta)
@@ -682,7 +735,7 @@ func TestListSymbols(t *testing.T) {
 			},
 			filter: map[string]interface{}{"project_id": uint64(1)},
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
-				symbols := make([]*Symbol, 10)
+				symbols := make([]*domain.Symbol, 10)
 				for i := 0; i < 10; i++ {
 					symbols[i] = validSymbol()
 				}
@@ -696,7 +749,7 @@ func TestListSymbols(t *testing.T) {
 				repo.On("ListSymbols", ctx, offset, limit, filter).Return(symbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.NotNil(t, symbols)
 				assert.NotNil(t, meta)
 				assert.True(t, meta.HasNextPage)
@@ -718,10 +771,10 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return([]*Symbol{}, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, offset, limit, filter).Return([]*domain.Symbol{}, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.NotNil(t, symbols)
 				assert.Len(t, symbols, 0)
 				assert.NotNil(t, meta)
@@ -761,7 +814,7 @@ func TestListSymbols(t *testing.T) {
 			filter: nil,
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
 				symbol := validSymbol()
-				expectedSymbols := []*Symbol{symbol}
+				expectedSymbols := []*domain.Symbol{symbol}
 				expectedMeta := &pagination.Meta{
 					TotalCount:      1,
 					Offset:          0,
@@ -773,7 +826,7 @@ func TestListSymbols(t *testing.T) {
 				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 1)
 			},
 		},
@@ -786,7 +839,7 @@ func TestListSymbols(t *testing.T) {
 			filter: map[string]interface{}{},
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
 				symbol := validSymbol()
-				expectedSymbols := []*Symbol{symbol}
+				expectedSymbols := []*domain.Symbol{symbol}
 				expectedMeta := &pagination.Meta{
 					TotalCount:      1,
 					Offset:          0,
@@ -798,7 +851,7 @@ func TestListSymbols(t *testing.T) {
 				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 1)
 			},
 		},
@@ -811,7 +864,7 @@ func TestListSymbols(t *testing.T) {
 			filter: map[string]interface{}{"project_id": uint64(1), "label": "test-label", "version": uint32(2)},
 			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
 				symbol := validSymbol()
-				expectedSymbols := []*Symbol{symbol}
+				expectedSymbols := []*domain.Symbol{symbol}
 				expectedMeta := &pagination.Meta{
 					TotalCount:      1,
 					Offset:          0,
@@ -823,7 +876,7 @@ func TestListSymbols(t *testing.T) {
 				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 1)
 			},
 		},
@@ -870,8 +923,359 @@ func TestListSymbols(t *testing.T) {
 	}
 }
 
-func TestNewSymbolValidator(t *testing.T) {
-	v := NewSymbolValidator()
+// Event Publishing Tests
+
+func TestCreateSymbol_PublishesEvent(t *testing.T) {
+	tests := []struct {
+		name           string
+		symbol         *domain.Symbol
+		repoReturn     *domain.Symbol
+		publishErr     error
+		wantErr        bool
+		wantEventCall  bool
+		checkEventData func(*testing.T, *domain.Symbol)
+	}{
+		{
+			name:   "publishes SymbolCreated event on success",
+			symbol: validSymbol(),
+			repoReturn: func() *domain.Symbol {
+				s := validSymbol()
+				s.ID = 1
+				return s
+			}(),
+			publishErr:    nil,
+			wantErr:       false,
+			wantEventCall: true,
+			checkEventData: func(t *testing.T, published *domain.Symbol) {
+				assert.Equal(t, uint64(1), published.ID)
+				assert.Equal(t, "Test Symbol", published.Label)
+				assert.Equal(t, uint64(1), published.Project)
+				assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", published.UID)
+			},
+		},
+		{
+			name:   "rolls back transaction on publish failure",
+			symbol: validSymbol(),
+			repoReturn: func() *domain.Symbol {
+				s := validSymbol()
+				s.ID = 1
+				return s
+			}(),
+			publishErr:    errors.New("publish failed"),
+			wantErr:       true,
+			wantEventCall: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deps := setupSymbolUseCaseWithDeps()
+			ctx := context.Background()
+
+			// Setup repo mock
+			deps.repo.On("Create", ctx, mock.AnythingOfType("*domain.Symbol")).Return(tt.repoReturn, nil)
+
+			// Setup publisher mock - capture the published symbol
+			var publishedSymbol *domain.Symbol
+			deps.pub.On("PublishSymbolCreated", ctx, mock.AnythingOfType("*domain.Symbol")).
+				Run(func(args mock.Arguments) {
+					publishedSymbol = args.Get(1).(*domain.Symbol)
+				}).
+				Return(tt.publishErr)
+
+			result, err := deps.uc.CreateSymbol(ctx, tt.symbol)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
+
+			if tt.wantEventCall {
+				deps.pub.AssertCalled(t, "PublishSymbolCreated", ctx, mock.AnythingOfType("*domain.Symbol"))
+				if tt.checkEventData != nil && publishedSymbol != nil {
+					tt.checkEventData(t, publishedSymbol)
+				}
+			}
+
+			deps.repo.AssertExpectations(t)
+			deps.pub.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUpdateSymbol_PublishesEvent(t *testing.T) {
+	tests := []struct {
+		name           string
+		symbol         *domain.Symbol
+		repoReturn     *domain.Symbol
+		publishErr     error
+		wantErr        bool
+		wantEventCall  bool
+		checkEventData func(*testing.T, *domain.Symbol)
+	}{
+		{
+			name: "publishes SymbolUpdated event on success",
+			symbol: func() *domain.Symbol {
+				s := validSymbol()
+				s.ID = 1
+				s.Label = "Updated Label"
+				return s
+			}(),
+			repoReturn: func() *domain.Symbol {
+				s := validSymbol()
+				s.ID = 1
+				s.Label = "Updated Label"
+				return s
+			}(),
+			publishErr:    nil,
+			wantErr:       false,
+			wantEventCall: true,
+			checkEventData: func(t *testing.T, published *domain.Symbol) {
+				assert.Equal(t, uint64(1), published.ID)
+				assert.Equal(t, "Updated Label", published.Label)
+			},
+		},
+		{
+			name: "rolls back transaction on publish failure",
+			symbol: func() *domain.Symbol {
+				s := validSymbol()
+				s.ID = 1
+				return s
+			}(),
+			repoReturn: func() *domain.Symbol {
+				s := validSymbol()
+				s.ID = 1
+				return s
+			}(),
+			publishErr:    errors.New("publish failed"),
+			wantErr:       true,
+			wantEventCall: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deps := setupSymbolUseCaseWithDeps()
+			ctx := context.Background()
+
+			// Setup repo mock
+			deps.repo.On("Update", ctx, mock.AnythingOfType("*domain.Symbol")).Return(tt.repoReturn, nil)
+
+			// Setup publisher mock - capture the published symbol
+			var publishedSymbol *domain.Symbol
+			deps.pub.On("PublishSymbolUpdated", ctx, mock.AnythingOfType("*domain.Symbol")).
+				Run(func(args mock.Arguments) {
+					publishedSymbol = args.Get(1).(*domain.Symbol)
+				}).
+				Return(tt.publishErr)
+
+			result, err := deps.uc.UpdateSymbol(ctx, tt.symbol)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
+
+			if tt.wantEventCall {
+				deps.pub.AssertCalled(t, "PublishSymbolUpdated", ctx, mock.AnythingOfType("*domain.Symbol"))
+				if tt.checkEventData != nil && publishedSymbol != nil {
+					tt.checkEventData(t, publishedSymbol)
+				}
+			}
+
+			deps.repo.AssertExpectations(t)
+			deps.pub.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDeleteSymbol_PublishesEvent(t *testing.T) {
+	tests := []struct {
+		name           string
+		symbolID       uint64
+		foundSymbol    *domain.Symbol
+		publishErr     error
+		wantErr        bool
+		wantEventCall  bool
+		checkEventData func(*testing.T, *domain.Symbol)
+	}{
+		{
+			name:     "publishes SymbolDeleted event on success",
+			symbolID: 1,
+			foundSymbol: func() *domain.Symbol {
+				s := validSymbol()
+				s.ID = 1
+				return s
+			}(),
+			publishErr:    nil,
+			wantErr:       false,
+			wantEventCall: true,
+			checkEventData: func(t *testing.T, published *domain.Symbol) {
+				assert.Equal(t, uint64(1), published.ID)
+				assert.Equal(t, "Test Symbol", published.Label)
+				assert.Equal(t, uint64(1), published.Project)
+			},
+		},
+		{
+			name:     "rolls back transaction on publish failure",
+			symbolID: 1,
+			foundSymbol: func() *domain.Symbol {
+				s := validSymbol()
+				s.ID = 1
+				return s
+			}(),
+			publishErr:    errors.New("publish failed"),
+			wantErr:       true,
+			wantEventCall: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deps := setupSymbolUseCaseWithDeps()
+			ctx := context.Background()
+
+			// Setup repo mocks
+			deps.repo.On("FindByID", ctx, tt.symbolID).Return(tt.foundSymbol, nil)
+			deps.repo.On("Delete", ctx, tt.symbolID).Return(nil)
+
+			// Setup publisher mock - capture the published symbol
+			var publishedSymbol *domain.Symbol
+			deps.pub.On("PublishSymbolDeleted", ctx, mock.AnythingOfType("*domain.Symbol")).
+				Run(func(args mock.Arguments) {
+					publishedSymbol = args.Get(1).(*domain.Symbol)
+				}).
+				Return(tt.publishErr)
+
+			err := deps.uc.DeleteSymbol(ctx, tt.symbolID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			if tt.wantEventCall {
+				deps.pub.AssertCalled(t, "PublishSymbolDeleted", ctx, mock.AnythingOfType("*domain.Symbol"))
+				if tt.checkEventData != nil && publishedSymbol != nil {
+					tt.checkEventData(t, publishedSymbol)
+				}
+			}
+
+			deps.repo.AssertExpectations(t)
+			deps.pub.AssertExpectations(t)
+		})
+	}
+}
+
+func TestEventPublishing_NotCalledOnValidationFailure(t *testing.T) {
+	t.Run("CreateSymbol does not publish event on validation failure", func(t *testing.T) {
+		deps := setupSymbolUseCaseWithDeps()
+		ctx := context.Background()
+
+		invalidSymbol := &domain.Symbol{
+			// Missing required fields - will fail validation
+			Label: "",
+		}
+
+		_, err := deps.uc.CreateSymbol(ctx, invalidSymbol)
+
+		assert.Error(t, err)
+		deps.pub.AssertNotCalled(t, "PublishSymbolCreated", mock.Anything, mock.Anything)
+	})
+
+	t.Run("UpdateSymbol does not publish event on validation failure", func(t *testing.T) {
+		deps := setupSymbolUseCaseWithDeps()
+		ctx := context.Background()
+
+		invalidSymbol := &domain.Symbol{
+			ID:    1,
+			Label: "", // Invalid - empty label
+		}
+
+		_, err := deps.uc.UpdateSymbol(ctx, invalidSymbol)
+
+		assert.Error(t, err)
+		deps.pub.AssertNotCalled(t, "PublishSymbolUpdated", mock.Anything, mock.Anything)
+	})
+
+	t.Run("DeleteSymbol does not publish event on invalid ID", func(t *testing.T) {
+		deps := setupSymbolUseCaseWithDeps()
+		ctx := context.Background()
+
+		err := deps.uc.DeleteSymbol(ctx, 0) // Invalid ID
+
+		assert.Error(t, err)
+		deps.pub.AssertNotCalled(t, "PublishSymbolDeleted", mock.Anything, mock.Anything)
+	})
+}
+
+func TestEventPublishing_NotCalledOnRepoFailure(t *testing.T) {
+	t.Run("CreateSymbol does not publish event on repo failure", func(t *testing.T) {
+		deps := setupSymbolUseCaseWithDeps()
+		ctx := context.Background()
+
+		symbol := validSymbol()
+		deps.repo.On("Create", ctx, mock.AnythingOfType("*domain.Symbol")).
+			Return(nil, errors.New("database error"))
+
+		_, err := deps.uc.CreateSymbol(ctx, symbol)
+
+		assert.Error(t, err)
+		deps.pub.AssertNotCalled(t, "PublishSymbolCreated", mock.Anything, mock.Anything)
+	})
+
+	t.Run("UpdateSymbol does not publish event on repo failure", func(t *testing.T) {
+		deps := setupSymbolUseCaseWithDeps()
+		ctx := context.Background()
+
+		symbol := validSymbol()
+		symbol.ID = 1
+		deps.repo.On("Update", ctx, mock.AnythingOfType("*domain.Symbol")).
+			Return(nil, errors.New("database error"))
+
+		_, err := deps.uc.UpdateSymbol(ctx, symbol)
+
+		assert.Error(t, err)
+		deps.pub.AssertNotCalled(t, "PublishSymbolUpdated", mock.Anything, mock.Anything)
+	})
+
+	t.Run("DeleteSymbol does not publish event on FindByID failure", func(t *testing.T) {
+		deps := setupSymbolUseCaseWithDeps()
+		ctx := context.Background()
+
+		deps.repo.On("FindByID", ctx, uint64(1)).Return(nil, domain.ErrDataNotFound)
+
+		err := deps.uc.DeleteSymbol(ctx, 1)
+
+		assert.Error(t, err)
+		deps.pub.AssertNotCalled(t, "PublishSymbolDeleted", mock.Anything, mock.Anything)
+	})
+
+	t.Run("DeleteSymbol does not publish event on Delete failure", func(t *testing.T) {
+		deps := setupSymbolUseCaseWithDeps()
+		ctx := context.Background()
+
+		symbol := validSymbol()
+		symbol.ID = 1
+		deps.repo.On("FindByID", ctx, uint64(1)).Return(symbol, nil)
+		deps.repo.On("Delete", ctx, uint64(1)).Return(errors.New("database error"))
+
+		err := deps.uc.DeleteSymbol(ctx, 1)
+
+		assert.Error(t, err)
+		deps.pub.AssertNotCalled(t, "PublishSymbolDeleted", mock.Anything, mock.Anything)
+	})
+}
+
+func TestNewValidator(t *testing.T) {
+	v := NewValidator()
 	assert.NotNil(t, v)
 	assert.IsType(t, &validator.Validate{}, v)
 }

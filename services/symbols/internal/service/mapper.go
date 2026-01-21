@@ -2,17 +2,17 @@
 package service
 
 import (
-	v1 "contracts/gen/symbols/v1"
+	v1 "contracts/gen/service/symbols/v1"
 	"fmt"
 	"platform/pagination"
 
-	"symbols/internal/biz"
+	"symbols/internal/biz/domain"
 
 	"github.com/go-kratos/kratos/v2/errors"
 )
 
-func toBizSymbol(s *v1.Symbol) *biz.Symbol {
-	return &biz.Symbol{
+func toBizSymbol(s *v1.Symbol) *domain.Symbol {
+	return &domain.Symbol{
 		ID:              s.Id,
 		Project:         s.ProjectId,
 		UID:             s.Uid,
@@ -20,29 +20,29 @@ func toBizSymbol(s *v1.Symbol) *biz.Symbol {
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
 		Version:         s.Version,
-		Data: &biz.SymbolData{
+		Data: &domain.SymbolData{
 			Project: s.ProjectId,
 			Data:    &s.Data,
 		},
 	}
 }
 
-func SymbolFromCreateRequest(s *v1.CreateSymbolRequest) *biz.Symbol {
-	return &biz.Symbol{
+func SymbolFromCreateRequest(s *v1.CreateSymbolRequest) *domain.Symbol {
+	return &domain.Symbol{
 		Project:         s.ProjectId,
 		UID:             s.Uid,
 		Label:           s.Label,
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
 		Version:         s.Version,
-		Data: &biz.SymbolData{
+		Data: &domain.SymbolData{
 			Project: s.ProjectId,
 			Data:    &s.Data,
 		},
 	}
 }
-func SymbolFromUpdateRequest(s *v1.UpdateSymbolRequest) *biz.Symbol {
-	return &biz.Symbol{
+func SymbolFromUpdateRequest(s *v1.UpdateSymbolRequest) *domain.Symbol {
+	return &domain.Symbol{
 		ID:              s.Id,
 		Project:         s.ProjectId,
 		UID:             s.Uid,
@@ -50,7 +50,7 @@ func SymbolFromUpdateRequest(s *v1.UpdateSymbolRequest) *biz.Symbol {
 		ClassName:       s.ClassName,
 		ComponentTarget: s.ComponentTarget,
 		Version:         s.Version,
-		Data: &biz.SymbolData{
+		Data: &domain.SymbolData{
 			Project: s.ProjectId,
 			Data:    &s.Data,
 		},
@@ -58,7 +58,7 @@ func SymbolFromUpdateRequest(s *v1.UpdateSymbolRequest) *biz.Symbol {
 }
 
 // NewListSymbolsOptions transforms proto request to domain options with defaults
-func NewListSymbolsOptions(in *v1.ListSymbolsRequest) (*biz.ListSymbolsOptions, error) {
+func NewListSymbolsOptions(in *v1.ListSymbolsRequest) (*domain.ListSymbolsOptions, error) {
 	// Apply default values if not provided
 	offset := in.Offset
 	limit := in.Limit
@@ -68,7 +68,7 @@ func NewListSymbolsOptions(in *v1.ListSymbolsRequest) (*biz.ListSymbolsOptions, 
 		limit = 20
 	}
 
-	options := &biz.ListSymbolsOptions{
+	options := &domain.ListSymbolsOptions{
 		ProjectID: in.ProjectId,
 		Pagination: pagination.OffsetPaginationParams{
 			Offset: offset,
@@ -79,7 +79,7 @@ func NewListSymbolsOptions(in *v1.ListSymbolsRequest) (*biz.ListSymbolsOptions, 
 	return options, nil
 }
 
-func toV1Symbol(s *biz.Symbol) *v1.Symbol {
+func toV1Symbol(s *domain.Symbol) *v1.Symbol {
 	var data []byte
 	if s.Data != nil && s.Data.Data != nil {
 		data = *s.Data.Data
@@ -95,7 +95,7 @@ func toV1Symbol(s *biz.Symbol) *v1.Symbol {
 		Data:            data,
 	}
 }
-func toV1SymbolItem(s *biz.Symbol) *v1.SymbolItem {
+func toV1SymbolItem(s *domain.Symbol) *v1.SymbolItem {
 	return &v1.SymbolItem{
 		Id:              s.ID,
 		ProjectId:       s.Project,
@@ -128,31 +128,31 @@ func toServiceError(err error) *errors.Error {
 	}
 
 	switch {
-	case errors.Is(err, biz.ErrSymbolNotFound):
+	case errors.Is(err, domain.ErrSymbolNotFound):
 		return errors.NotFound(
 			v1.ErrorReason_SYMBOL_NOT_FOUND.String(),
 			"symbol not found",
 		)
 
-	case errors.Is(err, biz.ErrInvalidID):
+	case errors.Is(err, domain.ErrInvalidID):
 		return errors.BadRequest(
 			v1.ErrorReason_INVALID_ID.String(),
 			"invalid symbol ID: must be greater than zero",
 		)
 
-	case errors.Is(err, biz.ErrDuplicateSymbol):
+	case errors.Is(err, domain.ErrDuplicateSymbol):
 		return errors.BadRequest(
 			v1.ErrorReason_DUPLICATE_SYMBOL.String(),
 			"symbol with this UID already exists in the project",
 		)
 
-	case errors.Is(err, biz.ErrValidationFailed):
+	case errors.Is(err, domain.ErrValidationFailed):
 		return errors.BadRequest(
 			v1.ErrorReason_VALIDATION_ERROR.String(),
 			fmt.Sprintf("validation failed: %v", err),
 		)
 
-	case errors.Is(err, biz.ErrDatabaseOperation):
+	case errors.Is(err, domain.ErrDatabaseOperation):
 		return errors.InternalServer(
 			v1.ErrorReason_DATABASE_ERROR.String(),
 			"database operation failed",

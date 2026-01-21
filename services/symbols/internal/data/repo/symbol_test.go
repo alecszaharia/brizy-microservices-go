@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"platform/pagination"
-	"symbols/internal/biz"
+	"symbols/internal/biz/domain"
 	"symbols/internal/data/common"
 	"symbols/internal/data/model"
 	"testing"
@@ -39,16 +39,16 @@ func cleanupDB(db *gorm.DB) {
 }
 
 // validDomainSymbol returns a valid domain symbol for testing
-func validDomainSymbol() *biz.Symbol {
+func validDomainSymbol() *domain.Symbol {
 	data := []byte(`{"key": "value"}`)
-	return &biz.Symbol{
+	return &domain.Symbol{
 		Project:         1,
 		UID:             "550e8400-e29b-41d4-a716-446655440000",
 		Label:           "Test Symbol",
 		ClassName:       "TestClass",
 		ComponentTarget: "TestTarget",
 		Version:         1,
-		Data: &biz.SymbolData{
+		Data: &domain.SymbolData{
 			Project: 1,
 			Data:    &data,
 		},
@@ -74,8 +74,8 @@ func validEntitySymbol() *model.Symbol {
 // mockTransaction is a mock implementation of the Transaction interface
 type mockTransaction struct{}
 
-func (m *mockTransaction) InTx(ctx context.Context, fn func(ctx context.Context, tx *gorm.DB) error) error {
-	return fn(ctx, nil)
+func (m *mockTransaction) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	return fn(ctx)
 }
 
 // Compile-time interface check
@@ -84,18 +84,18 @@ var _ common.Transaction = (*mockTransaction)(nil)
 func TestCreate(t *testing.T) {
 	tests := []struct {
 		name        string
-		input       *biz.Symbol
+		input       *domain.Symbol
 		setup       func(*gorm.DB)
 		wantErr     bool
 		checkError  func(*testing.T, error)
-		checkResult func(*testing.T, *biz.Symbol)
+		checkResult func(*testing.T, *domain.Symbol)
 	}{
 		{
 			name:    "success with nested data",
 			input:   validDomainSymbol(),
 			setup:   func(db *gorm.DB) {},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *biz.Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.NotZero(t, result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
@@ -105,14 +105,14 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "success without nested data",
-			input: func() *biz.Symbol {
+			input: func() *domain.Symbol {
 				s := validDomainSymbol()
 				s.Data = nil
 				return s
 			}(),
 			setup:   func(db *gorm.DB) {},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *biz.Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.NotZero(t, result.ID)
 				assert.Nil(t, result.Data)
@@ -127,7 +127,7 @@ func TestCreate(t *testing.T) {
 			},
 			wantErr: true,
 			checkError: func(t *testing.T, err error) {
-				assert.ErrorIs(t, err, biz.ErrDuplicateEntry)
+				assert.ErrorIs(t, err, domain.ErrDataDuplicateEntry)
 			},
 		},
 	}
@@ -164,11 +164,11 @@ func TestCreate(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	tests := []struct {
 		name        string
-		input       *biz.Symbol
+		input       *domain.Symbol
 		setup       func(*gorm.DB) uint64
 		wantErr     bool
 		checkError  func(*testing.T, error)
-		checkResult func(*testing.T, *biz.Symbol)
+		checkResult func(*testing.T, *domain.Symbol)
 	}{
 		{
 			name:  "success",
@@ -179,7 +179,7 @@ func TestUpdate(t *testing.T) {
 				return entity.ID
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *biz.Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.NotZero(t, result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
@@ -187,7 +187,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{
 			name: "success - update label",
-			input: func() *biz.Symbol {
+			input: func() *domain.Symbol {
 				s := validDomainSymbol()
 				s.Label = "Updated Label"
 				return s
@@ -198,14 +198,14 @@ func TestUpdate(t *testing.T) {
 				return entity.ID
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *biz.Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.Equal(t, "Updated Label", result.Label)
 			},
 		},
 		{
 			name: "not found error",
-			input: func() *biz.Symbol {
+			input: func() *domain.Symbol {
 				s := validDomainSymbol()
 				s.ID = 999
 				return s
@@ -215,7 +215,7 @@ func TestUpdate(t *testing.T) {
 			},
 			wantErr: true,
 			checkError: func(t *testing.T, err error) {
-				assert.ErrorIs(t, err, biz.ErrNotFound)
+				assert.ErrorIs(t, err, domain.ErrDataNotFound)
 			},
 		},
 	}
@@ -257,7 +257,7 @@ func TestFindByID(t *testing.T) {
 		setup       func(*gorm.DB) uint64
 		wantErr     bool
 		checkError  func(*testing.T, error)
-		checkResult func(*testing.T, *biz.Symbol)
+		checkResult func(*testing.T, *domain.Symbol)
 	}{
 		{
 			name: "success with nested data",
@@ -267,7 +267,7 @@ func TestFindByID(t *testing.T) {
 				return entity.ID
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *biz.Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.NotZero(t, result.ID)
 				assert.Equal(t, "Test Symbol", result.Label)
@@ -283,7 +283,7 @@ func TestFindByID(t *testing.T) {
 				return entity.ID
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, result *biz.Symbol) {
+			checkResult: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.NotZero(t, result.ID)
 				assert.Nil(t, result.Data)
@@ -296,7 +296,7 @@ func TestFindByID(t *testing.T) {
 			},
 			wantErr: true,
 			checkError: func(t *testing.T, err error) {
-				assert.ErrorIs(t, err, biz.ErrNotFound)
+				assert.ErrorIs(t, err, domain.ErrDataNotFound)
 			},
 		},
 	}
@@ -338,7 +338,7 @@ func TestListSymbols(t *testing.T) {
 		filter      map[string]interface{}
 		setup       func(*gorm.DB)
 		wantErr     bool
-		checkResult func(*testing.T, []*biz.Symbol, *pagination.Meta)
+		checkResult func(*testing.T, []*domain.Symbol, *pagination.Meta)
 	}{
 		{
 			name:   "success - first page with next page",
@@ -353,7 +353,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 5)
 				assert.Equal(t, uint64(10), meta.TotalCount)
 				assert.True(t, meta.HasNextPage)
@@ -373,7 +373,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 5)
 				assert.Equal(t, uint64(10), meta.TotalCount)
 				assert.False(t, meta.HasNextPage)
@@ -387,7 +387,7 @@ func TestListSymbols(t *testing.T) {
 			filter:  map[string]interface{}{"project_id": uint64(999)},
 			setup:   func(db *gorm.DB) {},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Empty(t, symbols)
 				assert.Equal(t, uint64(0), meta.TotalCount)
 				assert.False(t, meta.HasNextPage)
@@ -407,7 +407,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 3)
 				assert.Equal(t, uint64(8), meta.TotalCount)
 				assert.False(t, meta.HasNextPage)
@@ -436,7 +436,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 3)
 				assert.Equal(t, uint64(3), meta.TotalCount)
 				for _, s := range symbols {
@@ -457,7 +457,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 5)
 				assert.Equal(t, uint64(5), meta.TotalCount)
 			},
@@ -475,7 +475,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 5)
 				assert.Equal(t, uint64(5), meta.TotalCount)
 			},
@@ -501,7 +501,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Len(t, symbols, 3)
 				// Total count should reflect only filtered results (10), not all records (15)
 				assert.Equal(t, uint64(10), meta.TotalCount)
@@ -523,7 +523,7 @@ func TestListSymbols(t *testing.T) {
 				}
 			},
 			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*biz.Symbol, meta *pagination.Meta) {
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
 				assert.Empty(t, symbols)
 				assert.Equal(t, uint64(0), meta.TotalCount)
 				assert.False(t, meta.HasNextPage)
@@ -583,7 +583,7 @@ func TestDelete(t *testing.T) {
 			},
 			wantErr: true,
 			checkError: func(t *testing.T, err error) {
-				assert.ErrorIs(t, err, biz.ErrNotFound)
+				assert.ErrorIs(t, err, domain.ErrDataNotFound)
 			},
 		},
 	}
@@ -627,19 +627,19 @@ func TestToDomainSymbol(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  *model.Symbol
-		assert func(*testing.T, *biz.Symbol)
+		assert func(*testing.T, *domain.Symbol)
 	}{
 		{
 			name:  "nil input returns nil",
 			input: nil,
-			assert: func(t *testing.T, result *biz.Symbol) {
+			assert: func(t *testing.T, result *domain.Symbol) {
 				assert.Nil(t, result)
 			},
 		},
 		{
 			name:  "complete entity converts correctly",
 			input: validEntitySymbol(),
-			assert: func(t *testing.T, result *biz.Symbol) {
+			assert: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.Equal(t, uint64(0), result.ID) // Entity ID not set
 				assert.Equal(t, uint64(1), result.Project)
@@ -659,7 +659,7 @@ func TestToDomainSymbol(t *testing.T) {
 				e.SymbolData = nil
 				return e
 			}(),
-			assert: func(t *testing.T, result *biz.Symbol) {
+			assert: func(t *testing.T, result *domain.Symbol) {
 				assert.NotNil(t, result)
 				assert.Nil(t, result.Data)
 			},
@@ -677,7 +677,7 @@ func TestToDomainSymbol(t *testing.T) {
 func TestToEntitySymbol(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  *biz.Symbol
+		input  *domain.Symbol
 		assert func(*testing.T, *model.Symbol)
 	}{
 		{
@@ -704,7 +704,7 @@ func TestToEntitySymbol(t *testing.T) {
 		},
 		{
 			name: "domain without nested data",
-			input: func() *biz.Symbol {
+			input: func() *domain.Symbol {
 				s := validDomainSymbol()
 				s.Data = nil
 				return s
@@ -743,29 +743,29 @@ func TestMapGormError(t *testing.T) {
 			wantError:  nil,
 		},
 		{
-			name:       "gorm.ErrRecordNotFound returns biz.ErrNotFound",
+			name:       "gorm.ErrRecordNotFound returns domain.ErrDataNotFound",
 			inputError: gorm.ErrRecordNotFound,
-			wantError:  biz.ErrNotFound,
+			wantError:  domain.ErrDataNotFound,
 		},
 		{
 			name:       "MySQL duplicate key error",
 			inputError: errors.New("Error 1062: Duplicate entry '1-uid' for key 'idx_project_uid'"),
-			wantError:  biz.ErrDuplicateEntry,
+			wantError:  domain.ErrDataDuplicateEntry,
 		},
 		{
 			name:       "duplicate entry message",
 			inputError: errors.New("Duplicate entry '100-uid' for key 'idx_project_uid'"),
-			wantError:  biz.ErrDuplicateEntry,
+			wantError:  domain.ErrDataDuplicateEntry,
 		},
 		{
 			name:       "SQLite unique constraint",
 			inputError: errors.New("UNIQUE constraint failed: symbols.project_id, symbols.uid"),
-			wantError:  biz.ErrDuplicateEntry,
+			wantError:  domain.ErrDataDuplicateEntry,
 		},
 		{
-			name:       "other errors return biz.ErrDatabase",
+			name:       "other errors return domain.ErrDataDatabase",
 			inputError: errors.New("connection timeout"),
-			wantError:  biz.ErrDatabase,
+			wantError:  domain.ErrDataDatabase,
 		},
 	}
 

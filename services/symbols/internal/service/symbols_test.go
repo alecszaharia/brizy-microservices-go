@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	v1 "contracts/gen/symbols/v1"
+	v1 "contracts/gen/service/symbols/v1"
 	"errors"
 	"platform/pagination"
-	"symbols/internal/biz"
+	"symbols/internal/biz/domain"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,28 +16,28 @@ type mockSymbolUseCase struct {
 	mock.Mock
 }
 
-func (uc *mockSymbolUseCase) GetSymbol(ctx context.Context, id uint64) (*biz.Symbol, error) {
+func (uc *mockSymbolUseCase) GetSymbol(ctx context.Context, id uint64) (*domain.Symbol, error) {
 	args := uc.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*biz.Symbol), args.Error(1)
+	return args.Get(0).(*domain.Symbol), args.Error(1)
 }
 
-func (uc *mockSymbolUseCase) CreateSymbol(ctx context.Context, g *biz.Symbol) (*biz.Symbol, error) {
+func (uc *mockSymbolUseCase) CreateSymbol(ctx context.Context, g *domain.Symbol) (*domain.Symbol, error) {
 	args := uc.Called(ctx, g)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*biz.Symbol), args.Error(1)
+	return args.Get(0).(*domain.Symbol), args.Error(1)
 }
 
-func (uc *mockSymbolUseCase) UpdateSymbol(ctx context.Context, g *biz.Symbol) (*biz.Symbol, error) {
+func (uc *mockSymbolUseCase) UpdateSymbol(ctx context.Context, g *domain.Symbol) (*domain.Symbol, error) {
 	args := uc.Called(ctx, g)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*biz.Symbol), args.Error(1)
+	return args.Get(0).(*domain.Symbol), args.Error(1)
 }
 
 func (uc *mockSymbolUseCase) DeleteSymbol(ctx context.Context, id uint64) error {
@@ -45,15 +45,15 @@ func (uc *mockSymbolUseCase) DeleteSymbol(ctx context.Context, id uint64) error 
 	return args.Error(0)
 }
 
-func (uc *mockSymbolUseCase) ListSymbols(ctx context.Context, params *pagination.OffsetPaginationParams, filter map[string]interface{}) ([]*biz.Symbol, *pagination.Meta, error) {
+func (uc *mockSymbolUseCase) ListSymbols(ctx context.Context, params *pagination.OffsetPaginationParams, filter map[string]interface{}) ([]*domain.Symbol, *pagination.Meta, error) {
 	args := uc.Called(ctx, params, filter)
 	if args.Get(0) == nil {
 		return nil, nil, args.Error(2)
 	}
 	if args.Get(1) == nil {
-		return args.Get(0).([]*biz.Symbol), nil, args.Error(2)
+		return args.Get(0).([]*domain.Symbol), nil, args.Error(2)
 	}
-	return args.Get(0).([]*biz.Symbol), args.Get(1).(*pagination.Meta), args.Error(2)
+	return args.Get(0).([]*domain.Symbol), args.Get(1).(*pagination.Meta), args.Error(2)
 }
 
 func TestCreateSymbol(t *testing.T) {
@@ -77,7 +77,7 @@ func TestCreateSymbol(t *testing.T) {
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.CreateSymbolRequest) {
 				input := SymbolFromCreateRequest(req)
-				output := &biz.Symbol{
+				output := &domain.Symbol{
 					ID:              1,
 					Project:         req.ProjectId,
 					UID:             req.Uid,
@@ -85,7 +85,7 @@ func TestCreateSymbol(t *testing.T) {
 					ClassName:       req.ClassName,
 					ComponentTarget: req.ComponentTarget,
 					Version:         req.Version,
-					Data: &biz.SymbolData{
+					Data: &domain.SymbolData{
 						ID:      1,
 						Project: req.ProjectId,
 						Data:    &req.Data,
@@ -131,7 +131,7 @@ func TestCreateSymbol(t *testing.T) {
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.CreateSymbolRequest) {
 				input := SymbolFromCreateRequest(req)
-				output := &biz.Symbol{
+				output := &domain.Symbol{
 					ID:              1,
 					Project:         req.ProjectId,
 					UID:             req.Uid,
@@ -139,7 +139,7 @@ func TestCreateSymbol(t *testing.T) {
 					ClassName:       req.ClassName,
 					ComponentTarget: req.ComponentTarget,
 					Version:         req.Version,
-					Data: &biz.SymbolData{
+					Data: &domain.SymbolData{
 						ID:      1,
 						Project: req.ProjectId,
 						Data:    &req.Data,
@@ -204,7 +204,7 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return([]*biz.Symbol{}, meta, nil)
+				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return([]*domain.Symbol{}, meta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, resp *v1.ListSymbolsResponse) {
@@ -224,7 +224,7 @@ func TestListSymbols(t *testing.T) {
 				options, _ := NewListSymbolsOptions(req)
 				data1 := []byte("data1")
 				data2 := []byte("data2")
-				symbols := []*biz.Symbol{
+				symbols := []*domain.Symbol{
 					{
 						ID:              1,
 						Project:         1,
@@ -233,7 +233,7 @@ func TestListSymbols(t *testing.T) {
 						ClassName:       "Class1",
 						ComponentTarget: "component1",
 						Version:         1,
-						Data: &biz.SymbolData{
+						Data: &domain.SymbolData{
 							ID:      1,
 							Project: 1,
 							Data:    &data1,
@@ -247,7 +247,7 @@ func TestListSymbols(t *testing.T) {
 						ClassName:       "Class2",
 						ComponentTarget: "component2",
 						Version:         1,
-						Data: &biz.SymbolData{
+						Data: &domain.SymbolData{
 							ID:      2,
 							Project: 1,
 							Data:    &data2,
@@ -289,7 +289,7 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     true,
 					HasPreviousPage: true,
 				}
-				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return([]*biz.Symbol{}, meta, nil)
+				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return([]*domain.Symbol{}, meta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, resp *v1.ListSymbolsResponse) {
@@ -320,7 +320,7 @@ func TestListSymbols(t *testing.T) {
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.ListSymbolsRequest) {
 				options, _ := NewListSymbolsOptions(req)
-				symbols := []*biz.Symbol{
+				symbols := []*domain.Symbol{
 					{
 						ID:              1,
 						Project:         1,
@@ -390,7 +390,7 @@ func TestGetSymbol(t *testing.T) {
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.GetSymbolRequest) {
 				data := []byte("test data")
-				symbol := &biz.Symbol{
+				symbol := &domain.Symbol{
 					ID:              1,
 					Project:         1,
 					UID:             "550e8400-e29b-41d4-a716-446655440000",
@@ -398,7 +398,7 @@ func TestGetSymbol(t *testing.T) {
 					ClassName:       "TestClass",
 					ComponentTarget: "component",
 					Version:         1,
-					Data: &biz.SymbolData{
+					Data: &domain.SymbolData{
 						ID:      1,
 						Project: 1,
 						Data:    &data,
@@ -431,7 +431,7 @@ func TestGetSymbol(t *testing.T) {
 				Id: 1,
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.GetSymbolRequest) {
-				symbol := &biz.Symbol{
+				symbol := &domain.Symbol{
 					ID:              1,
 					Project:         1,
 					UID:             "550e8400-e29b-41d4-a716-446655440000",
@@ -499,7 +499,7 @@ func TestUpdateSymbol(t *testing.T) {
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.UpdateSymbolRequest) {
 				input := SymbolFromUpdateRequest(req)
-				output := &biz.Symbol{
+				output := &domain.Symbol{
 					ID:              req.Id,
 					Project:         req.ProjectId,
 					UID:             req.Uid,
@@ -507,7 +507,7 @@ func TestUpdateSymbol(t *testing.T) {
 					ClassName:       req.ClassName,
 					ComponentTarget: req.ComponentTarget,
 					Version:         req.Version,
-					Data: &biz.SymbolData{
+					Data: &domain.SymbolData{
 						ID:      1,
 						Project: req.ProjectId,
 						Data:    &req.Data,

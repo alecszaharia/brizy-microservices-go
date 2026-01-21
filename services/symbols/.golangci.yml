@@ -40,6 +40,9 @@ linters:
     # Security
     - gosec             # Security problems
 
+    # Architecture
+    - depguard          # Enforce clean architecture import rules
+
   settings:
     errcheck:
       check-type-assertions: true
@@ -128,6 +131,138 @@ linters:
 
     staticcheck:
       checks: ["all"]
+
+    # Clean Architecture Import Rules
+    # Enforces layer boundaries to maintain clean architecture
+    depguard:
+      rules:
+        # Rule 1: biz/domain (innermost layer - interfaces, models, errors)
+        biz-domain:
+          list-mode: lax
+          files:
+            - "**/internal/biz/domain/**/*.go"
+          deny:
+            - pkg: "symbols/internal/data"
+              desc: "biz/domain cannot import data layer - violates clean architecture"
+            - pkg: "symbols/internal/service"
+              desc: "biz/domain cannot import service layer"
+            - pkg: "symbols/internal/server"
+              desc: "biz/domain cannot import server layer"
+            - pkg: "contracts"
+              desc: "biz/domain should not depend on proto contracts"
+
+        # Rule 2: biz use cases (business logic)
+        biz-usecases:
+          list-mode: lax
+          files:
+            - "**/internal/biz/*/*.go"
+            - "!**/internal/biz/event/*.go"  # Exclude event mappers (allowed to import contracts)
+          deny:
+            - pkg: "symbols/internal/data/repo"
+              desc: "biz layer cannot import data/repo - use domain interfaces instead"
+            - pkg: "symbols/internal/data/model"
+              desc: "biz layer cannot import data/model - ORM entities belong in data layer"
+            - pkg: "symbols/internal/data/mq"
+              desc: "biz layer cannot import data/mq - use domain interfaces"
+            - pkg: "symbols/internal/service"
+              desc: "biz layer cannot import service layer"
+            - pkg: "symbols/internal/server"
+              desc: "biz layer cannot import server layer"
+            - pkg: "contracts"
+              desc: "biz layer should not depend on proto contracts"
+            - pkg: "gorm.io"
+              desc: "biz layer cannot use GORM - data access belongs in data layer"
+
+        # Rule 2b: biz/event (event mappers - bridge between domain and infrastructure)
+        # Allowed to import contracts for producing event payloads
+        biz-event:
+          list-mode: lax
+          files:
+            - "**/internal/biz/event/*.go"
+          deny:
+            - pkg: "symbols/internal/data"
+              desc: "biz/event cannot import data layer"
+            - pkg: "symbols/internal/service"
+              desc: "biz/event cannot import service layer"
+            - pkg: "symbols/internal/server"
+              desc: "biz/event cannot import server layer"
+            - pkg: "gorm.io"
+              desc: "biz/event cannot use GORM"
+
+        # Rule 3: data layer (repositories, ORM, message queues)
+        data-layer:
+          list-mode: lax
+          files:
+            - "**/internal/data/**/*.go"
+          deny:
+            - pkg: "symbols/internal/biz/symbol"
+              desc: "data layer cannot import biz use cases - only domain interfaces"
+            - pkg: "symbols/internal/service"
+              desc: "data layer cannot import service layer"
+            - pkg: "symbols/internal/server"
+              desc: "data layer cannot import server layer"
+
+        # Rule 4: service layer (gRPC/HTTP handlers)
+        service-layer:
+          list-mode: lax
+          files:
+            - "**/internal/service/**/*.go"
+          deny:
+            - pkg: "symbols/internal/data"
+              desc: "service layer cannot import data layer - violates clean architecture"
+            - pkg: "symbols/internal/server"
+              desc: "service layer cannot import server layer"
+            - pkg: "symbols/internal/biz/symbol"
+              desc: "service layer should use domain interfaces, not concrete implementations"
+            - pkg: "gorm.io"
+              desc: "service layer cannot use GORM"
+
+        # Rule 5: handlers layer (event handlers for async processing)
+        handlers-layer:
+          list-mode: lax
+          files:
+            - "**/internal/handlers/**/*.go"
+          deny:
+            - pkg: "symbols/internal/data"
+              desc: "handlers cannot import data layer"
+            - pkg: "symbols/internal/service"
+              desc: "handlers cannot import service layer"
+            - pkg: "symbols/internal/server"
+              desc: "handlers cannot import server layer"
+            - pkg: "symbols/internal/biz/symbol"
+              desc: "handlers should use domain interfaces"
+            - pkg: "contracts"
+              desc: "handlers should not depend on HTTP/gRPC contracts"
+
+        # Rule 6: server layer (HTTP/gRPC server setup)
+        server-layer:
+          list-mode: lax
+          files:
+            - "**/internal/server/**/*.go"
+          deny:
+            - pkg: "symbols/internal/biz"
+              desc: "server layer cannot import biz layer - use service layer"
+            - pkg: "symbols/internal/data"
+              desc: "server layer cannot import data layer"
+            - pkg: "gorm.io"
+              desc: "server layer cannot use GORM"
+
+        # Rule 7: worker layer (Watermill router setup)
+        worker-layer:
+          list-mode: lax
+          files:
+            - "**/internal/worker/**/*.go"
+          deny:
+            - pkg: "symbols/internal/biz"
+              desc: "worker layer cannot import biz layer - use handlers"
+            - pkg: "symbols/internal/data"
+              desc: "worker layer cannot import data layer"
+            - pkg: "symbols/internal/service"
+              desc: "worker layer cannot import HTTP/gRPC service layer"
+            - pkg: "symbols/internal/server"
+              desc: "worker layer cannot import server layer"
+            - pkg: "contracts"
+              desc: "worker layer should not depend on HTTP/gRPC contracts"
 
 issues:
   max-issues-per-linter: 0
