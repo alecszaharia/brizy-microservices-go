@@ -16,21 +16,23 @@ For an entity, create mappers in `internal/service/mapper.go`:
 
 ```go
 // Request → Business Model
-func {Entity}FromCreateRequest(req *pb.Create{Entity}Request) *biz.{Entity} {
-	return &biz.{Entity}{
+func {Entity}FromCreateRequest(req *pb.Create{Entity}Request) *domain.{Entity} {
+	return &domain.{Entity}{
 		Name: req.Name,
 		// Map fields...
 	}
 }
 
 // Business Model → Proto Response
-func toProto{Entity}(e *biz.{Entity}) *pb.{Entity} {
+func toProto{Entity}(e *domain.{Entity}) *pb.{Entity} {
 	return &pb.{Entity}{
 		Id:   e.ID,
 		Name: e.Name,
 		// Map fields...
 	}
 }
+
+**Import**: `import "{service}/internal/biz/domain"`
 ```
 </quick_start>
 
@@ -39,21 +41,21 @@ func toProto{Entity}(e *biz.{Entity}) *pb.{Entity} {
 
 **Request to Business Model**:
 ```go
-func {Entity}FromCreateRequest(req *pb.Create{Entity}Request) *biz.{Entity}
-func {Entity}FromUpdateRequest(req *pb.Update{Entity}Request, id uint64) *biz.{Entity}
+func {Entity}FromCreateRequest(req *pb.Create{Entity}Request) *domain.{Entity}
+func {Entity}FromUpdateRequest(req *pb.Update{Entity}Request, id uint64) *domain.{Entity}
 ```
 
 **Business Model to Proto**:
 ```go
-func toProto{Entity}(e *biz.{Entity}) *pb.{Entity}
-func toProto{Entities}(list []*biz.{Entity}) []*pb.{Entity}
+func toProto{Entity}(e *domain.{Entity}) *pb.{Entity}
+func toProto{Entities}(list []*domain.{Entity}) []*pb.{Entity}
 ```
 
 **List Options**:
 ```go
-func NewList{Entities}Options(req *pb.List{Entities}Request) *biz.List{Entities}Options {
-	return &biz.List{Entities}Options{
-		Pagination: pagination.PaginationParams{
+func NewList{Entities}Options(req *pb.List{Entities}Request) *domain.List{Entities}Options {
+	return &domain.List{Entities}Options{
+		Pagination: pagination.OffsetPaginationParams{
 			Offset: req.Offset,
 			Limit:  req.Limit,
 		},

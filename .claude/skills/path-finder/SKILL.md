@@ -45,10 +45,19 @@ brizy-go-services/
         │       └── wire_gen.go
         ├── internal/
         │   ├── biz/                 # Business logic layer
-        │   │   ├── interfaces.go
-        │   │   ├── models.go
-        │   │   ├── {entity}.go
-        │   │   └── {entity}_test.go
+        │   │   ├── domain/          # Domain models and interfaces
+        │   │   │   ├── models.go
+        │   │   │   ├── interfaces.go
+        │   │   │   └── errors.go
+        │   │   ├── {entity}/        # Use case implementations
+        │   │   │   ├── usecase.go
+        │   │   │   ├── usecase_test.go
+        │   │   │   └── validator.go
+        │   │   ├── event/           # Optional: Event mappers
+        │   │   │   ├── mapper.go
+        │   │   │   ├── mapper_test.go
+        │   │   │   └── topics.go
+        │   │   └── provider.go
         │   ├── data/                # Data access layer
         │   │   ├── data.go
         │   │   ├── model/
@@ -87,25 +96,42 @@ brizy-go-services/
 
 **Location**: \`services/{service}/internal/biz/\`
 
-**File Patterns**:
-- \`interfaces.go\` - Repository interface definitions
-- \`models.go\` - Business domain models and DTOs
-- \`{entity}.go\` - Use case implementations
-- \`{entity}_test.go\` - Use case tests
-- \`errors.go\` - Business error definitions
-- \`validator.go\` - Validation logic
+**Structure** (Domain-Driven Design):
+- \`domain/\` - Domain models, interfaces, and errors
+  - \`models.go\` - Business domain models and DTOs
+  - \`interfaces.go\` - Repository and service interface definitions
+  - \`errors.go\` - Domain errors (ErrSymbolNotFound) and data layer errors (ErrDataNotFound)
+- \`{entity}/\` - Use case implementations per entity
+  - \`usecase.go\` - Use case implementation
+  - \`usecase_test.go\` - Use case tests
+  - \`validator.go\` - Validation logic
+- \`event/\` - Event-related code (optional)
+  - \`mapper.go\` - Event payload mappers
+  - \`topics.go\` - Event topic constants
+- \`provider.go\` - Wire ProviderSet
 
-**Import Path**: \`{service}/internal/biz\`
+**Import Paths**:
+- Domain types: \`{service}/internal/biz/domain\`
+- Use cases: \`{service}/internal/biz/{entity}\`
+- Event mappers: \`{service}/internal/biz/event\`
 
 **Example**:
 ```go
-// services/symbols/internal/biz/symbols.go
-package biz
+// services/symbols/internal/biz/domain/interfaces.go
+package domain
 
 import "context"
 
 type SymbolUseCase interface {
     GetSymbol(ctx context.Context, id uint64) (*Symbol, error)
+}
+
+type SymbolRepo interface {
+    FindByID(ctx context.Context, id uint64) (*Symbol, error)
+}
+
+type SymbolEventPublisher interface {
+    PublishSymbolCreated(ctx context.Context, symbol *Symbol) error
 }
 ```
 
@@ -140,7 +166,7 @@ type SymbolUseCase interface {
 package repo
 
 import (
-    "symbols/internal/biz"
+    "symbols/internal/biz/domain"
     "symbols/internal/data/model"
 )
 ```
@@ -166,7 +192,7 @@ package service
 
 import (
     v1 "contracts/gen/symbols/v1"
-    "symbols/internal/biz"
+    "symbols/internal/biz/domain"
 )
 ```
 
@@ -312,9 +338,12 @@ Examples:
 
 | What | Path Pattern | Example |
 |------|-------------|---------|
-| Use case interface | \`services/{service}/internal/biz/interfaces.go\` | \`services/symbols/internal/biz/interfaces.go\` |
-| Use case implementation | \`services/{service}/internal/biz/{entity}.go\` | \`services/symbols/internal/biz/symbols.go\` |
-| Business models | \`services/{service}/internal/biz/models.go\` | \`services/symbols/internal/biz/models.go\` |
+| Use case interface | \`services/{service}/internal/biz/domain/interfaces.go\` | \`services/symbols/internal/biz/domain/interfaces.go\` |
+| Use case implementation | \`services/{service}/internal/biz/{entity}/usecase.go\` | \`services/symbols/internal/biz/symbol/usecase.go\` |
+| Business models | \`services/{service}/internal/biz/domain/models.go\` | \`services/symbols/internal/biz/domain/models.go\` |
+| Domain errors | \`services/{service}/internal/biz/domain/errors.go\` | \`services/symbols/internal/biz/domain/errors.go\` |
+| Validator | \`services/{service}/internal/biz/{entity}/validator.go\` | \`services/symbols/internal/biz/symbol/validator.go\` |
+| Event mappers | \`services/{service}/internal/biz/event/mapper.go\` | \`services/symbols/internal/biz/event/mapper.go\` |
 | GORM entity | \`services/{service}/internal/data/model/{entity}.go\` | \`services/symbols/internal/data/model/symbol.go\` |
 | Repository | \`services/{service}/internal/data/repo/{entity}.go\` | \`services/symbols/internal/data/repo/symbol.go\` |
 | Service handler | \`services/{service}/internal/service/{entity}.go\` | \`services/symbols/internal/service/symbols.go\` |
@@ -329,14 +358,17 @@ Examples:
 ### Within Same Service
 
 ```go
-// From service layer to biz layer
-import "{service}/internal/biz"
+// From service layer to biz domain layer
+import "{service}/internal/biz/domain"
+
+// From use case to domain layer
+import "{service}/internal/biz/domain"
 
 // From repo to model
 import "{service}/internal/data/model"
 
-// From repo to biz (for interfaces)
-import "{service}/internal/biz"
+// From repo to domain (for interfaces and errors)
+import "{service}/internal/biz/domain"
 ```
 
 ### Cross-Module Imports
@@ -361,18 +393,22 @@ import "github.com/go-kratos/kratos/v2/log"
 ### Finding Entity Files
 
 Given entity name \`Symbol\`:
-- Business model: \`services/symbols/internal/biz/models.go\` (struct \`Symbol\`)
-- Use case: \`services/symbols/internal/biz/symbols.go\`
+- Business model: \`services/symbols/internal/biz/domain/models.go\` (struct \`Symbol\`)
+- Repository interface: \`services/symbols/internal/biz/domain/interfaces.go\` (interface \`SymbolRepo\`)
+- Use case interface: \`services/symbols/internal/biz/domain/interfaces.go\` (interface \`SymbolUseCase\`)
+- Use case implementation: \`services/symbols/internal/biz/symbol/usecase.go\`
+- Validator: \`services/symbols/internal/biz/symbol/validator.go\`
 - GORM entity: \`services/symbols/internal/data/model/symbol.go\` (struct \`Symbol\`)
-- Repository: \`services/symbols/internal/data/repo/symbol.go\`
+- Repository implementation: \`services/symbols/internal/data/repo/symbol.go\`
 - Service handler: \`services/symbols/internal/service/symbols.go\`
 
 ### Finding Tests
 
 Same directory as implementation + \`_test.go\` suffix:
-- \`services/symbols/internal/biz/symbols_test.go\`
+- \`services/symbols/internal/biz/symbol/usecase_test.go\`
 - \`services/symbols/internal/data/repo/symbol_test.go\`
 - \`services/symbols/internal/service/symbols_test.go\`
+- \`services/symbols/internal/service/mapper_test.go\`
 
 ### Finding Configuration
 
@@ -389,8 +425,10 @@ Same directory as implementation + \`_test.go\` suffix:
 
 ## File Naming Conventions
 
-- Use **singular entity name**: \`symbol.go\` (not \`symbols.go\`) for model/repo
-- Use **plural entity name**: \`symbols.go\` for use case/service (matches proto)
-- Use **snake_case**: \`symbol_data.go\`
+- Use **singular entity name**: \`symbol.go\` for GORM models and repositories
+- Use **usecase.go**: for use case implementations (not entity name)
+- Use **plural entity name**: \`symbols.go\` for service handlers (matches proto)
+- Use **snake_case**: \`symbol_data.go\` for multi-word names
+- Use **domain package**: for models, interfaces, and errors (not individual files per entity)
 - Tests: \`{filename}_test.go\`
 

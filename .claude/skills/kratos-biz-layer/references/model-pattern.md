@@ -2,6 +2,11 @@
 
 <overview>
 Business models represent domain entities with validation rules. They're independent of database schema and use validator tags for validation.
+
+**Location**: `internal/biz/domain/models.go`
+**Package**: `package domain`
+
+All domain models are defined in a single file in the domain package, not per entity.
 </overview>
 
 <basic_model>

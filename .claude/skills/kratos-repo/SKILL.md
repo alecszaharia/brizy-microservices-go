@@ -19,14 +19,14 @@ package repo
 import (
     "context"
     "platform/pagination"
-    "{service}/internal/biz"
+    "{service}/internal/biz/domain"
     "{service}/internal/data/model"
     "github.com/go-kratos/kratos/v2/log"
     "gorm.io/gorm"
 )
 
 // Constructor function
-func New{Entity}Repo(db *gorm.DB, tx common.Transaction, logger log.Logger) biz.{Entity}Repo {
+func New{Entity}Repo(db *gorm.DB, tx common.Transaction, logger log.Logger) domain.{Entity}Repo {
     return &{entity}Repo{
         db:  db,
         tx:  tx,
@@ -46,7 +46,7 @@ type {entity}Repo struct {
 
 #### Create Operation
 ```go
-func (r *{entity}Repo) Create(ctx context.Context, s *biz.{Entity}) (*biz.{Entity}, error) {
+func (r *{entity}Repo) Create(ctx context.Context, s *domain.{Entity}) (*domain.{Entity}, error) {
     entity := toEntity{Entity}(s)
     
     // Use FullSaveAssociations for nested relationships
@@ -61,7 +61,7 @@ func (r *{entity}Repo) Create(ctx context.Context, s *biz.{Entity}) (*biz.{Entit
 
 #### Update Operation
 ```go
-func (r *{entity}Repo) Update(ctx context.Context, entity *biz.{Entity}) (*biz.{Entity}, error) {
+func (r *{entity}Repo) Update(ctx context.Context, entity *domain.{Entity}) (*domain.{Entity}, error) {
     // Transform to GORM entity
     e := toEntity{Entity}(entity)
     
@@ -81,7 +81,7 @@ func (r *{entity}Repo) Update(ctx context.Context, entity *biz.{Entity}) (*biz.{
 
 #### FindByID Operation
 ```go
-func (r *{entity}Repo) FindByID(ctx context.Context, id uint64) (*biz.{Entity}, error) {
+func (r *{entity}Repo) FindByID(ctx context.Context, id uint64) (*domain.{Entity}, error) {
     var entity *model.{Entity}
     
     err := r.db.WithContext(ctx).
@@ -100,7 +100,7 @@ func (r *{entity}Repo) FindByID(ctx context.Context, id uint64) (*biz.{Entity}, 
 
 #### List with Pagination and Filters
 ```go
-func (r *{entity}Repo) List{Entities}(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*biz.{Entity}, *pagination.Meta, error) {
+func (r *{entity}Repo) List{Entities}(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*domain.{Entity}, *pagination.Meta, error) {
     var entities []*model.{Entity}
     var totalCount int64
     
@@ -128,7 +128,7 @@ func (r *{entity}Repo) List{Entities}(ctx context.Context, offset uint64, limit 
     }
     
     // Transform to domain
-    results := make([]*biz.{Entity}, 0, len(entities))
+    results := make([]*domain.{Entity}, 0, len(entities))
     for _, e := range entities {
         results = append(results, toDomain{Entity}(e))
     }
@@ -155,7 +155,7 @@ func (r *{entity}Repo) Delete(ctx context.Context, id uint64) error {
         return r.mapGormError(result.Error)
     }
     if result.RowsAffected == 0 {
-        return biz.ErrNotFound
+        return domain.ErrDataNotFound
     }
     return nil
 }
@@ -163,35 +163,43 @@ func (r *{entity}Repo) Delete(ctx context.Context, id uint64) error {
 
 ### 3. Error Mapping Pattern
 
-CRITICAL: Always map GORM errors to business layer errors
+CRITICAL: Always map GORM errors to data layer errors (not business errors)
 
 ```go
 func (r *{entity}Repo) mapGormError(err error) error {
     if err == nil {
         return nil
     }
-    
+
+    // Map GORM errors to data layer errors
     if errors.Is(err, gorm.ErrRecordNotFound) {
-        return biz.ErrNotFound
+        return domain.ErrDataNotFound
     }
-    
-    if isDuplicateKeyError(err) {
-        return biz.ErrDuplicateEntry
+
+    if r.isDuplicateKeyError(err) {
+        return domain.ErrDataDuplicateEntry
     }
-    
-    return biz.ErrDatabase
+
+    // Wrap other database errors
+    return domain.ErrDataDatabase
 }
 
-func isDuplicateKeyError(err error) bool {
-    if err == nil {
-        return false
-    }
-    errMsg := strings.ToLower(err.Error())
-    return strings.Contains(errMsg, "duplicate") || 
-           strings.Contains(errMsg, "unique constraint") ||
-           strings.Contains(errMsg, "error 1062")
+// isDuplicateKeyError checks if error is a duplicate key violation
+func (r *{entity}Repo) isDuplicateKeyError(err error) bool {
+    errMsg := err.Error()
+    return strings.Contains(errMsg, "Error 1062") ||
+        strings.Contains(errMsg, "Duplicate entry") ||
+        strings.Contains(errMsg, "UNIQUE constraint failed")
 }
 ```
+
+**Data Layer Error Types:**
+- `domain.ErrDataNotFound` - Record not found
+- `domain.ErrDataDuplicateEntry` - Unique constraint violation
+- `domain.ErrDataTransactionFailed` - Transaction operation failed
+- `domain.ErrDataDatabase` - Generic database error
+
+**NOTE**: These are data layer errors. The business layer (use case) will map these to domain-specific errors (e.g., `domain.ErrSymbolNotFound`, `domain.ErrDuplicateSymbol`)
 
 ### 4. Mapper Functions
 
@@ -199,7 +207,7 @@ Always provide bidirectional mappers between domain and entity:
 
 ```go
 // Domain to Entity
-func toEntity{Entity}(d *biz.{Entity}) *model.{Entity} {
+func toEntity{Entity}(d *domain.{Entity}) *model.{Entity} {
     if d == nil {
         return nil
     }
@@ -222,12 +230,12 @@ func toEntity{Entity}(d *biz.{Entity}) *model.{Entity} {
 }
 
 // Entity to Domain
-func toDomain{Entity}(e *model.{Entity}) *biz.{Entity} {
+func toDomain{Entity}(e *model.{Entity}) *domain.{Entity} {
     if e == nil {
         return nil
     }
     
-    domain := &biz.{Entity}{
+    domain := &domain.{Entity}{
         Id:      e.ID,
         Project: e.ProjectID,
         Field1:  e.Field1,
@@ -236,7 +244,7 @@ func toDomain{Entity}(e *model.{Entity}) *biz.{Entity} {
     
     // Handle nested relationships
     if e.RelatedData != nil {
-        domain.RelatedData = &biz.RelatedData{
+        domain.RelatedData = &domain.RelatedData{
             Id:      e.RelatedData.ID,
             Project: e.RelatedData.ProjectID,
             Field:   e.RelatedData.Field,
@@ -295,13 +303,13 @@ services/{service}/internal/data/repo/
 
 ## Validation Checklist
 
-- [ ] Constructor function returns interface type (\`biz.{Entity}Repo\`)
+- [ ] Constructor function returns interface type (\`domain.{Entity}Repo\`)
 - [ ] All DB operations use \`WithContext(ctx)\`
 - [ ] Create/Update use \`FullSaveAssociations\` if nested data exists
 - [ ] Update checks \`RowsAffected == 0\` for not found
 - [ ] Delete checks \`RowsAffected == 0\` for not found
 - [ ] All errors are logged with context
-- [ ] GORM errors are mapped to business layer errors
+- [ ] GORM errors are mapped to data layer errors (\`domain.ErrData*\`)
 - [ ] FindByID preloads related entities
 - [ ] List applies filters before count and find
 - [ ] List returns pagination metadata
@@ -311,21 +319,23 @@ services/{service}/internal/data/repo/
 ## Anti-Patterns
 
 ❌ **DON'T:**
-- Return GORM errors directly to business layer
+- Return GORM errors directly (must map to \`domain.ErrData*\`)
 - Forget context propagation (\`WithContext\`)
 - Apply filters only to find, not count
 - Ignore \`RowsAffected\` in Update/Delete
 - Use value receivers (use pointer receivers)
 - Forget to preload relationships in FindByID
+- Return business errors from repo (return data layer errors instead)
 
 ✅ **DO:**
-- Make sure the repo implements the interface defined in the business layer
-- Always map errors to business layer types
+- Implement interface defined in \`biz/domain/interfaces.go\`
+- Always map GORM errors to data layer errors (\`domain.ErrData*\`)
 - Use context for all database operations
 - Apply filters to both count and find queries
 - Check \`RowsAffected\` for Update/Delete
 - Use pointer receivers for struct methods
 - Preload relationships when needed
+- Let business layer map data errors to domain errors
 
 ## Success Criteria
 

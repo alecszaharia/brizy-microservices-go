@@ -20,9 +20,11 @@ Connects transport (gRPC/HTTP) to business logic:
 ```go
 type {Entity}Service struct {
 	pb.Unimplemented{Entity}ServiceServer  // Embed unimplemented server
-	uc biz.{Entity}UseCase                // Use case dependency
+	uc domain.{Entity}UseCase             // Use case dependency (from domain package)
 }
 ```
+
+**Import**: `import "{service}/internal/biz/domain"`
 
 ### Handler Method Pattern
 ```go

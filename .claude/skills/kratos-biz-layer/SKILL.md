@@ -14,27 +14,63 @@ The business layer (biz) is the core of Clean Architecture in Kratos microservic
 - **Biz contains business logic** independent of frameworks
 - **Biz uses domain models** not ORM entities
 
-### Three Key Components
+### Domain-Driven Structure (Current Pattern)
 
-**1. Business Models** (`internal/biz/models.go`)
-- Domain entities with validation tags
-- Independent of database structure
-- Use `validator` struct tags for validation
+The biz layer follows domain-driven design with these subdirectories:
 
-**2. Repository Interfaces** (`internal/biz/interfaces.go`)
-- Define data access contracts
-- Implemented by data layer
-- Accept/return business models, not ORM entities
+**1. Domain Layer** (`internal/biz/domain/`)
+- `models.go` - Domain entities with validation tags
+- `interfaces.go` - Repository, use case, and event publisher interfaces
+- `errors.go` - Domain errors (ErrSymbolNotFound) and data layer errors (ErrDataNotFound)
 
-**3. Use Cases** (`internal/biz/{entity}.go`)
-- Orchestrate business logic
-- Depend on repository interfaces
-- Handle validation, logging, error mapping
+**2. Use Case Layer** (`internal/biz/{entity}/`)
+- `usecase.go` - Use case implementation
+- `usecase_test.go` - Use case tests with event assertions
+- `validator.go` - Validation logic factory
+
+**3. Event Layer** (`internal/biz/event/`) - Optional
+- `mapper.go` - Event payload transformations
+- `topics.go` - Event topic constants
+
+**4. Provider** (`internal/biz/provider.go`)
+- Wire ProviderSet for dependency injection
+
+### Error Separation Pattern
+
+**Data Layer Errors** (returned by repositories):
+- `domain.ErrDataNotFound` - Record not found
+- `domain.ErrDataDuplicateEntry` - Unique constraint violation
+- `domain.ErrDataDatabase` - Generic database error
+
+**Domain Errors** (returned by use cases):
+- `domain.ErrSymbolNotFound` - Symbol not found (business error)
+- `domain.ErrDuplicateSymbol` - Duplicate symbol (business error)
+- `domain.ErrDatabaseOperation` - Database operation failed
+
+**Pattern**: Repositories return data errors, use cases map to domain errors via `toDomainError()` helper.
+
+### Event Publishing Pattern
+
+Use cases integrate event publishing for domain events:
+- Accept `domain.{Entity}EventPublisher` interface
+- Publish events within transactions
+- Transaction rolls back if publishing fails
+
+**Example**:
+```go
+err := uc.tm.InTx(ctx, func(ctx context.Context) error {
+    symbol, err = uc.repo.Create(ctx, s)
+    if err != nil {
+        return err
+    }
+    return uc.pub.PublishSymbolCreated(ctx, symbol)
+})
+```
 
 ### Wire Dependency Injection
-All constructors must be added to `ProviderSet` in `internal/biz/biz.go`:
+All constructors must be added to `ProviderSet` in `internal/biz/provider.go`:
 ```go
-var ProviderSet = wire.NewSet(NewSymbolValidator, NewSymbolUseCase)
+var ProviderSet = wire.NewSet(symbol.NewValidator, symbol.NewUseCase)
 ```
 After changes, run `make generate` to regenerate Wire code.
 </essential_principles>
@@ -81,13 +117,31 @@ Additional patterns (error handling, logging, transactions, testing) are covered
 
 <success_criteria>
 Business layer code is correct when:
-- Use case struct has repo, log, validator, tm fields
-- Constructor function returns interface type (not struct)
+
+**Structure**:
+- Domain models in `internal/biz/domain/models.go`
+- Interfaces in `internal/biz/domain/interfaces.go`
+- Errors in `internal/biz/domain/errors.go`
+- Use case in `internal/biz/{entity}/usecase.go`
+- Validator in `internal/biz/{entity}/validator.go`
+- Tests in `internal/biz/{entity}/usecase_test.go`
+
+**Use Case Implementation**:
+- Struct has repo, pub, log, validator, tm fields
+- Constructor returns interface type (domain.{Entity}UseCase)
 - Methods accept context.Context as first parameter
 - Validation happens before repository calls
-- Errors are properly wrapped and logged
-- Repository interface added to interfaces.go
-- Business model added to models.go with validation tags
-- Constructor added to ProviderSet in biz.go
+- Data errors mapped to domain errors via `toDomainError()`
+- Events published within transactions
+- All errors logged with context
+
+**Domain Layer**:
+- Repository interface in `domain/interfaces.go`
+- Event publisher interface in `domain/interfaces.go` (if events)
+- Business model in `domain/models.go` with validation tags
+- Domain errors (ErrSymbolNotFound) separated from data errors (ErrDataNotFound)
+
+**Wire Integration**:
+- Constructor added to ProviderSet in `internal/biz/provider.go`
 - User reminded to run `make generate`
 </success_criteria>

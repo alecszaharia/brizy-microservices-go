@@ -17,7 +17,7 @@ The repository uses Go 1.25 workspaces with three main modules:
 
 ### Architecture Pattern
 
-Services follow **Clean Architecture** with dependency injection via Google Wire:
+Services follow **Clean Architecture** with **domain-driven design** and dependency injection via Google Wire:
 
 ```
 cmd/
@@ -26,27 +26,49 @@ cmd/
       ├── wire.go       # Wire dependency definitions
       └── wire_gen.go   # Generated wire code
 internal/
-  ├── biz/            # Business logic layer (use cases)
-  │   ├── interfaces.go   # Repository interfaces
-  │   ├── models.go       # Business models
-  │   └── {entity}.go     # Use case implementations
+  ├── biz/            # Business logic layer (domain-driven design)
+  │   ├── domain/         # Domain models, interfaces, and errors
+  │   │   ├── models.go       # Business domain models
+  │   │   ├── interfaces.go   # Repository & use case interfaces
+  │   │   └── errors.go       # Domain and data layer errors
+  │   ├── {entity}/       # Use case implementations per entity
+  │   │   ├── usecase.go      # Use case implementation
+  │   │   ├── usecase_test.go # Use case tests
+  │   │   └── validator.go    # Validation logic
+  │   ├── event/          # Event-related code (optional)
+  │   │   ├── mapper.go       # Event payload transformations
+  │   │   └── topics.go       # Event topic constants
+  │   └── provider.go     # Wire ProviderSet
   ├── data/           # Data access layer (repositories)
   │   ├── data.go         # Database setup (GORM)
   │   ├── model/          # ORM entities
-  │   └── repo/           # Repository implementations
+  │   ├── repo/           # Repository implementations
+  │   ├── mq/             # Pub/sub wrappers (optional)
+  │   │   ├── publisher.go
+  │   │   └── subscriber.go
+  │   └── common/         # Transaction utilities
   ├── service/        # Service layer (gRPC/HTTP handlers)
   │   ├── service.go      # Service struct
   │   ├── {entity}.go     # Handler implementations
-  │   └── mapper.go       # DTO ↔ Business model conversions
+  │   └── mapper.go       # DTO ↔ Domain model conversions
   ├── server/         # Server setup (gRPC, HTTP)
   └── conf/           # Configuration protobuf definitions
 ```
 
-**Layer dependencies**: `service` → `biz` → `data`
+**Layer dependencies**: `service` → `biz/domain` → `data`
 
-- Service layer depends on business layer
+- Service layer depends on business layer (imports `biz/domain`)
 - Business layer defines interfaces, data layer implements them
+- Use cases are organized by entity in separate packages
+- Domain models, interfaces, and errors centralized in `biz/domain`
 - Wire handles dependency injection across all layers
+
+**Key Architectural Principles**:
+
+1. **Domain-Driven Structure**: Business logic organized around domain entities
+2. **Error Separation**: Data errors (`ErrDataNotFound`) vs domain errors (`ErrSymbolNotFound`)
+3. **Event Publishing**: Use cases integrate event publishing within transactions
+4. **Clean Interfaces**: All interfaces defined in `domain/interfaces.go`
 
 ## Development Commands
 
@@ -169,8 +191,50 @@ After modifying `wire.go`, run `make generate` to regenerate `wire_gen.go`.
 Services use GORM for ORM. Data layer pattern:
 
 - `internal/data/model/` - GORM entities with struct tags
-- `internal/data/repo/` - Repository implementations satisfying `biz` interfaces
+- `internal/data/repo/` - Repository implementations satisfying `biz/domain` interfaces
 - `internal/data/common/transaction.go` - Transaction management utilities
+
+### Error Handling Pattern
+
+Services use **two-layer error handling** for clean separation:
+
+**Data Layer Errors** (`internal/biz/domain/errors.go`):
+- `ErrDataNotFound` - Record not found in database
+- `ErrDataDuplicateEntry` - Unique constraint violation
+- `ErrDataDatabase` - Generic database error
+
+**Domain Errors** (`internal/biz/domain/errors.go`):
+- `ErrSymbolNotFound` - Business-level "symbol not found"
+- `ErrDuplicateSymbol` - Business-level "duplicate symbol"
+- `ErrDatabaseOperation` - Business-level "database operation failed"
+
+**Error Flow**:
+1. **Repositories** return data errors (`domain.ErrDataNotFound`)
+2. **Use cases** map to domain errors via `toDomainError()` helper
+3. **Service layer** maps domain errors to gRPC/HTTP status codes
+
+**Example**:
+```go
+// Repository (data layer)
+if errors.Is(err, gorm.ErrRecordNotFound) {
+    return domain.ErrDataNotFound
+}
+
+// Use case (business layer)
+if errors.Is(err, domain.ErrDataNotFound) {
+    return domain.ErrSymbolNotFound
+}
+
+// Service layer (transport)
+if errors.Is(err, domain.ErrSymbolNotFound) {
+    return errors.NotFound("SYMBOL_NOT_FOUND", "symbol not found")
+}
+```
+
+**Why two layers?**
+- Data errors are infrastructure concerns
+- Domain errors are business concerns
+- Allows changing database technology without affecting business logic
 
 ### Configuration
 
@@ -182,8 +246,27 @@ Services use protobuf for configuration:
 
 ### Testing
 
-Tests are co-located with implementation files (e.g., `symbols.go` → `symbols_test.go`).
-Use `testify/mock` for mocking repository interfaces defined in `biz/interfaces.go`.
+Tests are co-located with implementation files:
+- Use case tests: `internal/biz/{entity}/usecase_test.go`
+- Repository tests: `internal/data/repo/{entity}_test.go`
+- Service tests: `internal/service/{entity}_test.go`
+
+**Testing Patterns**:
+- Use `testify/mock` for mocking repository interfaces defined in `biz/domain/interfaces.go`
+- Repository tests use in-memory SQLite
+- Use case tests mock repositories and event publishers
+- Event publishing tests verify transaction rollback on failure
+
+**Event Publishing Tests**:
+```go
+// Test event publishing success
+deps.repo.On("Create", ctx, mock.Anything).Return(symbol, nil)
+deps.pub.On("PublishSymbolCreated", ctx, mock.Anything).Return(nil)
+
+// Test transaction rollback on publish failure
+deps.pub.On("PublishSymbolCreated", ctx, mock.Anything).Return(errors.New("failed"))
+// Verify create didn't happen
+```
 
 ### Protobuf Tools
 
@@ -290,6 +373,44 @@ Subscriber → Handler → Use Case (same request_id in logs)
 ```
 
 **Best Practice**: Always use `logger.WithContext(ctx)` for distributed tracing.
+
+### Event Publishing from Use Cases
+
+Use cases integrate event publishing for domain events with **transaction safety**:
+
+**Event Publisher Interface** (`internal/biz/domain/interfaces.go`):
+```go
+type SymbolEventPublisher interface {
+    PublishSymbolCreated(ctx context.Context, symbol *Symbol) error
+    PublishSymbolUpdated(ctx context.Context, symbol *Symbol) error
+    PublishSymbolDeleted(ctx context.Context, symbol *Symbol) error
+}
+```
+
+**Pattern - Publish within Transaction**:
+```go
+err := uc.tm.InTx(ctx, func(ctx context.Context) error {
+    symbol, err = uc.repo.Create(ctx, s)
+    if err != nil {
+        return err  // Rolls back
+    }
+    // Publish event - if this fails, create also rolls back
+    return uc.pub.PublishSymbolCreated(ctx, symbol)
+})
+```
+
+**Key Principles**:
+1. **Events published within transactions** - Ensures data consistency
+2. **Transaction rolls back on publish failure** - Prevents "phantom events"
+3. **Event payload includes full domain model** - Rich event data for consumers
+4. **Events defined in domain layer** - Business events, not technical events
+
+**Event Flow**:
+```
+Use Case → Transaction Start → Repository Operation → Event Publishing → Transaction Commit
+           ↓ (on error)
+           Transaction Rollback (reverts both DB changes and prevents event)
+```
 
 ### Documentation
 
