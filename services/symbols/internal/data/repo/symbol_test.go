@@ -333,18 +333,18 @@ func TestFindByID(t *testing.T) {
 func TestListSymbols(t *testing.T) {
 	tests := []struct {
 		name        string
-		offset      uint64
-		limit       uint32
-		filter      map[string]interface{}
+		opts        domain.ListSymbolsOptions
 		setup       func(*gorm.DB)
 		wantErr     bool
 		checkResult func(*testing.T, []*domain.Symbol, *pagination.Meta)
 	}{
 		{
-			name:   "success - first page with next page",
-			offset: 0,
-			limit:  5,
-			filter: map[string]interface{}{"project_id": uint64(1)},
+			name: "success - first page with next page",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 5},
+				Sort:       domain.DefaultSortOption(),
+			},
 			setup: func(db *gorm.DB) {
 				for i := 0; i < 10; i++ {
 					entity := validEntitySymbol()
@@ -361,10 +361,12 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name:   "success - second page",
-			offset: 5,
-			limit:  5,
-			filter: map[string]interface{}{"project_id": uint64(1)},
+			name: "success - second page",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 5, Limit: 5},
+				Sort:       domain.DefaultSortOption(),
+			},
 			setup: func(db *gorm.DB) {
 				for i := 0; i < 10; i++ {
 					entity := validEntitySymbol()
@@ -381,10 +383,12 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name:    "success - empty results",
-			offset:  0,
-			limit:   10,
-			filter:  map[string]interface{}{"project_id": uint64(999)},
+			name: "success - empty results",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(999)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				Sort:       domain.DefaultSortOption(),
+			},
 			setup:   func(db *gorm.DB) {},
 			wantErr: false,
 			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
@@ -395,10 +399,12 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name:   "success - last page incomplete",
-			offset: 5,
-			limit:  10,
-			filter: map[string]interface{}{"project_id": uint64(1)},
+			name: "success - last page incomplete",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 5, Limit: 10},
+				Sort:       domain.DefaultSortOption(),
+			},
 			setup: func(db *gorm.DB) {
 				for i := 0; i < 8; i++ {
 					entity := validEntitySymbol()
@@ -415,10 +421,15 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name:   "success - filter by multiple fields",
-			offset: 0,
-			limit:  10,
-			filter: map[string]interface{}{"project_id": uint64(1), "label": "test-label"},
+			name: "success - filter by label",
+			opts: func() domain.ListSymbolsOptions {
+				label := "test-label"
+				return domain.ListSymbolsOptions{
+					Filter:     domain.SymbolFilter{ProjectID: uint64(1), Label: &label},
+					Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+					Sort:       domain.DefaultSortOption(),
+				}
+			}(),
 			setup: func(db *gorm.DB) {
 				// Create symbols with matching label
 				for i := 0; i < 3; i++ {
@@ -445,10 +456,47 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name:   "success - nil filter returns all",
-			offset: 0,
-			limit:  10,
-			filter: nil,
+			name: "success - filter by component_target",
+			opts: func() domain.ListSymbolsOptions {
+				componentTarget := "target-a"
+				return domain.ListSymbolsOptions{
+					Filter:     domain.SymbolFilter{ProjectID: uint64(1), ComponentTarget: &componentTarget},
+					Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+					Sort:       domain.DefaultSortOption(),
+				}
+			}(),
+			setup: func(db *gorm.DB) {
+				// Create symbols with matching component_target
+				for i := 0; i < 2; i++ {
+					entity := validEntitySymbol()
+					entity.ComponentTarget = "target-a"
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+				// Create symbols with different component_target
+				for i := 2; i < 5; i++ {
+					entity := validEntitySymbol()
+					entity.ComponentTarget = "target-b"
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 2)
+				assert.Equal(t, uint64(2), meta.TotalCount)
+				for _, s := range symbols {
+					assert.Equal(t, "target-a", s.ComponentTarget)
+				}
+			},
+		},
+		{
+			name: "success - no optional filters returns all for project",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				Sort:       domain.DefaultSortOption(),
+			},
 			setup: func(db *gorm.DB) {
 				for i := 0; i < 5; i++ {
 					entity := validEntitySymbol()
@@ -463,28 +511,12 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name:   "success - empty filter returns all",
-			offset: 0,
-			limit:  10,
-			filter: map[string]interface{}{},
-			setup: func(db *gorm.DB) {
-				for i := 0; i < 5; i++ {
-					entity := validEntitySymbol()
-					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
-					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
-				}
+			name: "success - filter with pagination interaction",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 2, Limit: 3},
+				Sort:       domain.DefaultSortOption(),
 			},
-			wantErr: false,
-			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
-				assert.Len(t, symbols, 5)
-				assert.Equal(t, uint64(5), meta.TotalCount)
-			},
-		},
-		{
-			name:   "success - filter with pagination interaction",
-			offset: 2,
-			limit:  3,
-			filter: map[string]interface{}{"project_id": uint64(1)},
 			setup: func(db *gorm.DB) {
 				// Create 10 symbols for project 1
 				for i := 0; i < 10; i++ {
@@ -510,10 +542,15 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name:   "success - zero results with filter",
-			offset: 0,
-			limit:  10,
-			filter: map[string]interface{}{"label": "non-existent-label"},
+			name: "success - zero results with filter",
+			opts: func() domain.ListSymbolsOptions {
+				label := "non-existent-label"
+				return domain.ListSymbolsOptions{
+					Filter:     domain.SymbolFilter{ProjectID: uint64(1), Label: &label},
+					Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+					Sort:       domain.DefaultSortOption(),
+				}
+			}(),
 			setup: func(db *gorm.DB) {
 				for i := 0; i < 5; i++ {
 					entity := validEntitySymbol()
@@ -530,6 +567,150 @@ func TestListSymbols(t *testing.T) {
 				assert.False(t, meta.HasPreviousPage)
 			},
 		},
+		{
+			name: "success - combined filters (label and component_target)",
+			opts: func() domain.ListSymbolsOptions {
+				label := "special-label"
+				componentTarget := "special-target"
+				return domain.ListSymbolsOptions{
+					Filter:     domain.SymbolFilter{ProjectID: uint64(1), Label: &label, ComponentTarget: &componentTarget},
+					Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+					Sort:       domain.DefaultSortOption(),
+				}
+			}(),
+			setup: func(db *gorm.DB) {
+				// Create symbol that matches both filters
+				entity1 := validEntitySymbol()
+				entity1.Label = "special-label"
+				entity1.ComponentTarget = "special-target"
+				entity1.UID = "550e8400-e29b-41d4-a716-446655440001"
+				db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity1)
+
+				// Create symbol that matches only label
+				entity2 := validEntitySymbol()
+				entity2.Label = "special-label"
+				entity2.ComponentTarget = "other-target"
+				entity2.UID = "550e8400-e29b-41d4-a716-446655440002"
+				db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity2)
+
+				// Create symbol that matches only component_target
+				entity3 := validEntitySymbol()
+				entity3.Label = "other-label"
+				entity3.ComponentTarget = "special-target"
+				entity3.UID = "550e8400-e29b-41d4-a716-446655440003"
+				db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity3)
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 1)
+				assert.Equal(t, uint64(1), meta.TotalCount)
+				assert.Equal(t, "special-label", symbols[0].Label)
+				assert.Equal(t, "special-target", symbols[0].ComponentTarget)
+			},
+		},
+		{
+			name: "success - sort by ID ascending (default)",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				Sort:       domain.SortOption{Field: domain.SortByID, Direction: domain.SortAsc},
+			},
+			setup: func(db *gorm.DB) {
+				for i := 0; i < 5; i++ {
+					entity := validEntitySymbol()
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					entity.Label = fmt.Sprintf("Symbol-%d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 5)
+				// Verify ascending order by ID
+				for i := 1; i < len(symbols); i++ {
+					assert.True(t, symbols[i-1].ID < symbols[i].ID, "IDs should be in ascending order")
+				}
+			},
+		},
+		{
+			name: "success - sort by ID descending",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				Sort:       domain.SortOption{Field: domain.SortByID, Direction: domain.SortDesc},
+			},
+			setup: func(db *gorm.DB) {
+				for i := 0; i < 5; i++ {
+					entity := validEntitySymbol()
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					entity.Label = fmt.Sprintf("Symbol-%d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 5)
+				// Verify descending order by ID
+				for i := 1; i < len(symbols); i++ {
+					assert.True(t, symbols[i-1].ID > symbols[i].ID, "IDs should be in descending order")
+				}
+			},
+		},
+		{
+			name: "success - sort by label ascending",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				Sort:       domain.SortOption{Field: domain.SortByLabel, Direction: domain.SortAsc},
+			},
+			setup: func(db *gorm.DB) {
+				labels := []string{"Charlie", "Alpha", "Bravo"}
+				for i, label := range labels {
+					entity := validEntitySymbol()
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					entity.Label = label
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 3)
+				// Verify ascending order by label
+				assert.Equal(t, "Alpha", symbols[0].Label)
+				assert.Equal(t, "Bravo", symbols[1].Label)
+				assert.Equal(t, "Charlie", symbols[2].Label)
+			},
+		},
+		{
+			name: "success - deterministic pagination with sorting",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 3},
+				Sort:       domain.SortOption{Field: domain.SortByID, Direction: domain.SortAsc},
+			},
+			setup: func(db *gorm.DB) {
+				for i := 0; i < 6; i++ {
+					entity := validEntitySymbol()
+					entity.UID = fmt.Sprintf("550e8400-e29b-41d4-a716-44665544%04d", i)
+					db.Session(&gorm.Session{FullSaveAssociations: true}).Create(entity)
+				}
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 3)
+				assert.Equal(t, uint64(6), meta.TotalCount)
+				assert.True(t, meta.HasNextPage)
+				// First 3 symbols should have the lowest IDs
+				firstPageIDs := make([]uint64, len(symbols))
+				for i, s := range symbols {
+					firstPageIDs[i] = s.ID
+				}
+				// Verify ordering
+				for i := 1; i < len(firstPageIDs); i++ {
+					assert.True(t, firstPageIDs[i-1] < firstPageIDs[i])
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -543,7 +724,7 @@ func TestListSymbols(t *testing.T) {
 			tx := &mockTransaction{}
 			repo := NewSymbolRepo(db, tx, logger)
 
-			symbols, meta, err := repo.ListSymbols(context.Background(), tt.offset, tt.limit, tt.filter)
+			symbols, meta, err := repo.ListSymbols(context.Background(), tt.opts)
 
 			if tt.wantErr {
 				assert.Error(t, err)

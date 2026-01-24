@@ -27,13 +27,10 @@ func (s *SymbolService) CreateSymbol(ctx context.Context, in *v1.CreateSymbolReq
 }
 func (s *SymbolService) ListSymbols(ctx context.Context, in *v1.ListSymbolsRequest) (*v1.ListSymbolsResponse, error) {
 	// Transform request to domain options (applies defaults)
-	options, err := NewListSymbolsOptions(in)
-	if err != nil {
-		return nil, toServiceError(err)
-	}
+	opts := NewListSymbolsOptions(in)
 
 	// Call business layer to get symbols and pagination metadata
-	symbols, meta, err := s.uc.ListSymbols(ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID})
+	symbols, meta, err := s.uc.ListSymbols(ctx, opts)
 	if err != nil {
 		return nil, toServiceError(err)
 	}

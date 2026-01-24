@@ -143,15 +143,19 @@ func (uc *useCase) DeleteSymbol(ctx context.Context, id uint64) error {
 }
 
 // ListSymbols lists Symbols based on the provided options with pagination metadata.
-func (uc *useCase) ListSymbols(ctx context.Context, params *pagination.OffsetPaginationParams, filter map[string]interface{}) ([]*domain.Symbol, *pagination.Meta, error) {
-
-	// Validate options (including params )
-	if err := uc.validator.Struct(params); err != nil {
+func (uc *useCase) ListSymbols(ctx context.Context, opts domain.ListSymbolsOptions) ([]*domain.Symbol, *pagination.Meta, error) {
+	// Validate options
+	if err := uc.validator.Struct(opts); err != nil {
 		return nil, nil, fmt.Errorf("%w: %w", domain.ErrValidationFailed, err)
 	}
 
-	// Call a repository to get symbols and params metadata
-	symbols, meta, err := uc.repo.ListSymbols(ctx, params.Offset, params.Limit, filter)
+	// Apply default sort if not specified
+	if opts.Sort.Field == "" {
+		opts.Sort = domain.DefaultSortOption()
+	}
+
+	// Call repository to get symbols and pagination metadata
+	symbols, meta, err := uc.repo.ListSymbols(ctx, opts)
 	if err != nil {
 		uc.log.WithContext(ctx).Errorf("Failed to list symbols: %v", err)
 		return nil, nil, toDomainError(err)

@@ -269,11 +269,13 @@ func Test_toV1Symbol(t *testing.T) {
 }
 
 func Test_toBizListSymbolsOptions(t *testing.T) {
+	labelFilter := "test-label"
+	componentTargetFilter := "test-component"
+
 	tests := []struct {
 		name     string
 		input    *v1.ListSymbolsRequest
-		wantErr  bool
-		expected *domain.ListSymbolsOptions
+		expected domain.ListSymbolsOptions
 	}{
 		{
 			name: "with offset and limit",
@@ -282,13 +284,15 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 				Offset:    10,
 				Limit:     20,
 			},
-			wantErr: false,
-			expected: &domain.ListSymbolsOptions{
-				ProjectID: 1,
+			expected: domain.ListSymbolsOptions{
+				Filter: domain.SymbolFilter{
+					ProjectID: 1,
+				},
 				Pagination: pagination.OffsetPaginationParams{
 					Offset: 10,
 					Limit:  20,
 				},
+				Sort: domain.DefaultSortOption(),
 			},
 		},
 		{
@@ -298,13 +302,15 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 				Offset:    0,
 				Limit:     0,
 			},
-			wantErr: false,
-			expected: &domain.ListSymbolsOptions{
-				ProjectID: 1,
+			expected: domain.ListSymbolsOptions{
+				Filter: domain.SymbolFilter{
+					ProjectID: 1,
+				},
 				Pagination: pagination.OffsetPaginationParams{
 					Offset: 0,
 					Limit:  20, // Default value
 				},
+				Sort: domain.DefaultSortOption(),
 			},
 		},
 		{
@@ -314,12 +320,97 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 				Offset:    0,
 				Limit:     10,
 			},
-			wantErr: false,
-			expected: &domain.ListSymbolsOptions{
-				ProjectID: 1,
+			expected: domain.ListSymbolsOptions{
+				Filter: domain.SymbolFilter{
+					ProjectID: 1,
+				},
 				Pagination: pagination.OffsetPaginationParams{
 					Offset: 0,
 					Limit:  10,
+				},
+				Sort: domain.DefaultSortOption(),
+			},
+		},
+		{
+			name: "with label filter",
+			input: &v1.ListSymbolsRequest{
+				ProjectId: 1,
+				Offset:    0,
+				Limit:     10,
+				Label:     &labelFilter,
+			},
+			expected: domain.ListSymbolsOptions{
+				Filter: domain.SymbolFilter{
+					ProjectID: 1,
+					Label:     &labelFilter,
+				},
+				Pagination: pagination.OffsetPaginationParams{
+					Offset: 0,
+					Limit:  10,
+				},
+				Sort: domain.DefaultSortOption(),
+			},
+		},
+		{
+			name: "with component_target filter",
+			input: &v1.ListSymbolsRequest{
+				ProjectId:       1,
+				Offset:          0,
+				Limit:           10,
+				ComponentTarget: &componentTargetFilter,
+			},
+			expected: domain.ListSymbolsOptions{
+				Filter: domain.SymbolFilter{
+					ProjectID:       1,
+					ComponentTarget: &componentTargetFilter,
+				},
+				Pagination: pagination.OffsetPaginationParams{
+					Offset: 0,
+					Limit:  10,
+				},
+				Sort: domain.DefaultSortOption(),
+			},
+		},
+		{
+			name: "with all filters",
+			input: &v1.ListSymbolsRequest{
+				ProjectId:       1,
+				Offset:          5,
+				Limit:           25,
+				Label:           &labelFilter,
+				ComponentTarget: &componentTargetFilter,
+			},
+			expected: domain.ListSymbolsOptions{
+				Filter: domain.SymbolFilter{
+					ProjectID:       1,
+					Label:           &labelFilter,
+					ComponentTarget: &componentTargetFilter,
+				},
+				Pagination: pagination.OffsetPaginationParams{
+					Offset: 5,
+					Limit:  25,
+				},
+				Sort: domain.DefaultSortOption(),
+			},
+		},
+		{
+			name: "includes default sort option",
+			input: &v1.ListSymbolsRequest{
+				ProjectId: 1,
+				Offset:    0,
+				Limit:     10,
+			},
+			expected: domain.ListSymbolsOptions{
+				Filter: domain.SymbolFilter{
+					ProjectID: 1,
+				},
+				Pagination: pagination.OffsetPaginationParams{
+					Offset: 0,
+					Limit:  10,
+				},
+				Sort: domain.SortOption{
+					Field:     domain.SortByID,
+					Direction: domain.SortAsc,
 				},
 			},
 		},
@@ -327,18 +418,15 @@ func Test_toBizListSymbolsOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := NewListSymbolsOptions(tt.input)
+			result := NewListSymbolsOptions(tt.input)
 
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.Nil(t, result)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, result)
-				assert.Equal(t, tt.expected.ProjectID, result.ProjectID)
-				assert.Equal(t, tt.expected.Pagination.Offset, result.Pagination.Offset)
-				assert.Equal(t, tt.expected.Pagination.Limit, result.Pagination.Limit)
-			}
+			assert.Equal(t, tt.expected.Filter.ProjectID, result.Filter.ProjectID)
+			assert.Equal(t, tt.expected.Filter.Label, result.Filter.Label)
+			assert.Equal(t, tt.expected.Filter.ComponentTarget, result.Filter.ComponentTarget)
+			assert.Equal(t, tt.expected.Pagination.Offset, result.Pagination.Offset)
+			assert.Equal(t, tt.expected.Pagination.Limit, result.Pagination.Limit)
+			assert.Equal(t, tt.expected.Sort.Field, result.Sort.Field)
+			assert.Equal(t, tt.expected.Sort.Direction, result.Sort.Direction)
 		})
 	}
 }

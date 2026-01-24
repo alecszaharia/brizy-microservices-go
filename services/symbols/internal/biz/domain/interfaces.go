@@ -19,7 +19,7 @@ type SymbolRepo interface {
 	FindByID(context.Context, uint64) (*Symbol, error)
 
 	// ListSymbols returns a list of Symbols from the repository with pagination metadata.
-	ListSymbols(context.Context, uint64, uint32, map[string]interface{}) ([]*Symbol, *pagination.Meta, error)
+	ListSymbols(ctx context.Context, opts ListSymbolsOptions) ([]*Symbol, *pagination.Meta, error)
 
 	// Delete removes a Symbol from the repository by its ID. Returns an error if the operation fails.
 	Delete(context.Context, uint64) error
@@ -40,7 +40,7 @@ type SymbolUseCase interface {
 	DeleteSymbol(ctx context.Context, id uint64) error
 
 	// ListSymbols lists Symbols based on the provided options and returns pagination metadata.
-	ListSymbols(ctx context.Context, params *pagination.OffsetPaginationParams, filter map[string]interface{}) ([]*Symbol, *pagination.Meta, error)
+	ListSymbols(ctx context.Context, opts ListSymbolsOptions) ([]*Symbol, *pagination.Meta, error)
 }
 
 // SymbolEventPublisher defines the event publishing interface for Symbols.

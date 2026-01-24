@@ -57,8 +57,8 @@ func SymbolFromUpdateRequest(s *v1.UpdateSymbolRequest) *domain.Symbol {
 	}
 }
 
-// NewListSymbolsOptions transforms proto request to domain options with defaults
-func NewListSymbolsOptions(in *v1.ListSymbolsRequest) (*domain.ListSymbolsOptions, error) {
+// NewListSymbolsOptions transforms proto request to domain options with defaults.
+func NewListSymbolsOptions(in *v1.ListSymbolsRequest) domain.ListSymbolsOptions {
 	// Apply default values if not provided
 	offset := in.Offset
 	limit := in.Limit
@@ -68,15 +68,27 @@ func NewListSymbolsOptions(in *v1.ListSymbolsRequest) (*domain.ListSymbolsOption
 		limit = 20
 	}
 
-	options := &domain.ListSymbolsOptions{
+	// Build filter with required project_id and optional fields
+	filter := domain.SymbolFilter{
 		ProjectID: in.ProjectId,
+	}
+
+	// Handle optional filter fields (proto3 optional generates pointer types)
+	if in.Label != nil {
+		filter.Label = in.Label
+	}
+	if in.ComponentTarget != nil {
+		filter.ComponentTarget = in.ComponentTarget
+	}
+
+	return domain.ListSymbolsOptions{
+		Filter: filter,
 		Pagination: pagination.OffsetPaginationParams{
 			Offset: offset,
 			Limit:  limit,
 		},
+		Sort: domain.DefaultSortOption(),
 	}
-
-	return options, nil
 }
 
 func toV1Symbol(s *domain.Symbol) *v1.Symbol {

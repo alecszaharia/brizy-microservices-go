@@ -45,8 +45,8 @@ func (uc *mockSymbolUseCase) DeleteSymbol(ctx context.Context, id uint64) error 
 	return args.Error(0)
 }
 
-func (uc *mockSymbolUseCase) ListSymbols(ctx context.Context, params *pagination.OffsetPaginationParams, filter map[string]interface{}) ([]*domain.Symbol, *pagination.Meta, error) {
-	args := uc.Called(ctx, params, filter)
+func (uc *mockSymbolUseCase) ListSymbols(ctx context.Context, opts domain.ListSymbolsOptions) ([]*domain.Symbol, *pagination.Meta, error) {
+	args := uc.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, nil, args.Error(2)
 	}
@@ -196,7 +196,7 @@ func TestListSymbols(t *testing.T) {
 				Limit:     10,
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.ListSymbolsRequest) {
-				options, _ := NewListSymbolsOptions(req)
+				opts := NewListSymbolsOptions(req)
 				meta := &pagination.Meta{
 					TotalCount:      0,
 					Offset:          0,
@@ -204,7 +204,7 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return([]*domain.Symbol{}, meta, nil)
+				uc.On("ListSymbols", ctx, opts).Return([]*domain.Symbol{}, meta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, resp *v1.ListSymbolsResponse) {
@@ -221,7 +221,7 @@ func TestListSymbols(t *testing.T) {
 				Limit:     10,
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.ListSymbolsRequest) {
-				options, _ := NewListSymbolsOptions(req)
+				opts := NewListSymbolsOptions(req)
 				data1 := []byte("data1")
 				data2 := []byte("data2")
 				symbols := []*domain.Symbol{
@@ -261,7 +261,7 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return(symbols, meta, nil)
+				uc.On("ListSymbols", ctx, opts).Return(symbols, meta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, resp *v1.ListSymbolsResponse) {
@@ -281,7 +281,7 @@ func TestListSymbols(t *testing.T) {
 				Limit:     10,
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.ListSymbolsRequest) {
-				options, _ := NewListSymbolsOptions(req)
+				opts := NewListSymbolsOptions(req)
 				meta := &pagination.Meta{
 					TotalCount:      25,
 					Offset:          10,
@@ -289,7 +289,7 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     true,
 					HasPreviousPage: true,
 				}
-				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return([]*domain.Symbol{}, meta, nil)
+				uc.On("ListSymbols", ctx, opts).Return([]*domain.Symbol{}, meta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, resp *v1.ListSymbolsResponse) {
@@ -307,8 +307,8 @@ func TestListSymbols(t *testing.T) {
 				Limit:     10,
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.ListSymbolsRequest) {
-				options, _ := NewListSymbolsOptions(req)
-				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return(nil, nil, errors.New("database error"))
+				opts := NewListSymbolsOptions(req)
+				uc.On("ListSymbols", ctx, opts).Return(nil, nil, errors.New("database error"))
 			},
 			wantErr: true,
 		},
@@ -319,7 +319,7 @@ func TestListSymbols(t *testing.T) {
 				Limit:     10,
 			},
 			mockSetup: func(uc *mockSymbolUseCase, ctx context.Context, req *v1.ListSymbolsRequest) {
-				options, _ := NewListSymbolsOptions(req)
+				opts := NewListSymbolsOptions(req)
 				symbols := []*domain.Symbol{
 					{
 						ID:              1,
@@ -339,7 +339,7 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				uc.On("ListSymbols", ctx, &options.Pagination, map[string]interface{}{"project_id": options.ProjectID}).Return(symbols, meta, nil)
+				uc.On("ListSymbols", ctx, opts).Return(symbols, meta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, resp *v1.ListSymbolsResponse) {
