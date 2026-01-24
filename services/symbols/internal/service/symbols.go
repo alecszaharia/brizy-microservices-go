@@ -26,7 +26,7 @@ func (s *SymbolService) CreateSymbol(ctx context.Context, in *v1.CreateSymbolReq
 	return &v1.CreateSymbolResponse{Symbol: toV1Symbol(g)}, nil
 }
 func (s *SymbolService) ListSymbols(ctx context.Context, in *v1.ListSymbolsRequest) (*v1.ListSymbolsResponse, error) {
-	// Transform request to domain options (applies defaults)
+	// Transform request to domain list options (applies defaults)
 	opts := NewListSymbolsOptions(in)
 
 	// Call business layer to get symbols and pagination metadata

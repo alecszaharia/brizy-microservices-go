@@ -53,37 +53,21 @@ services:
       - GOMAXPROCS=6
       - DB_DSN=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=True&loc=Local
 
-  symbols-worker:
-    image: symbols:dev
-    container_name: symbols-worker
-    networks:
-      - service-network
-    volumes:
-      - ./services/symbols/configs:/data/conf
-    command:  [ "./symbols-worker", "--conf", "/data/conf/config.yaml" ]
-    depends_on:
-      mysql:
-        condition: service_healthy
-    environment:
-      - CONFIG_PATH=/data/conf
-      - GOMAXPROCS=6
-      - DB_DSN=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=True&loc=Local
-
-  symbols-worker2:
-    image: symbols:dev
-    container_name: symbols-worker2
-    networks:
-      - service-network
-    volumes:
-      - ./services/symbols/configs:/data/conf
-    command:  [ "./symbols-worker", "--conf", "/data/conf/config.yaml" ]
-    depends_on:
-      mysql:
-        condition: service_healthy
-    environment:
-      - CONFIG_PATH=/data/conf
-      - GOMAXPROCS=6
-      - DB_DSN=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=True&loc=Local
+#  symbols-worker:
+#    image: symbols:dev
+#    container_name: symbols-worker
+#    networks:
+#      - service-network
+#    volumes:
+#      - ./services/symbols/configs:/data/conf
+#    command:  [ "./symbols-worker", "--conf", "/data/conf/config.yaml" ]
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+#    environment:
+#      - CONFIG_PATH=/data/conf
+#      - GOMAXPROCS=6
+#      - DB_DSN=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=True&loc=Local
 
   serena-symbols:
     build:
