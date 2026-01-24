@@ -79,8 +79,8 @@ func (m *MockSymbolRepo) FindByID(ctx context.Context, id uint64) (*domain.Symbo
 	return args.Get(0).(*domain.Symbol), args.Error(1)
 }
 
-func (m *MockSymbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*domain.Symbol, *pagination.Meta, error) {
-	args := m.Called(ctx, offset, limit, filter)
+func (m *MockSymbolRepo) ListSymbols(ctx context.Context, opts domain.ListSymbolsOptions) ([]*domain.Symbol, *pagination.Meta, error) {
+	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, nil, args.Error(2)
 	}
@@ -658,21 +658,19 @@ func TestDeleteSymbol(t *testing.T) {
 func TestListSymbols(t *testing.T) {
 	tests := []struct {
 		name        string
-		params      *pagination.OffsetPaginationParams
-		filter      map[string]interface{}
-		mockSetup   func(*MockSymbolRepo, context.Context, uint64, uint32, map[string]interface{})
+		opts        domain.ListSymbolsOptions
+		mockSetup   func(*MockSymbolRepo, context.Context, domain.ListSymbolsOptions)
 		wantErr     bool
 		errContains string
 		checkResult func(*testing.T, []*domain.Symbol, *pagination.Meta)
 	}{
 		{
 			name: "success - first page",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  10,
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
 			},
-			filter: map[string]interface{}{"project_id": uint64(1)},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
 				symbol := validSymbol()
 				expectedSymbols := []*domain.Symbol{symbol}
 				expectedMeta := &pagination.Meta{
@@ -682,7 +680,11 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Filter.ProjectID == opts.Filter.ProjectID &&
+						o.Pagination.Offset == opts.Pagination.Offset &&
+						o.Pagination.Limit == opts.Pagination.Limit
+				})).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
@@ -698,12 +700,11 @@ func TestListSymbols(t *testing.T) {
 		},
 		{
 			name: "success - with next page",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  10,
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
 			},
-			filter: map[string]interface{}{"project_id": uint64(1)},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
 				symbols := make([]*domain.Symbol, 10)
 				for i := 0; i < 10; i++ {
 					symbols[i] = validSymbol()
@@ -715,7 +716,9 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     true,
 					HasPreviousPage: false,
 				}
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return(symbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Filter.ProjectID == opts.Filter.ProjectID
+				})).Return(symbols, expectedMeta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
@@ -729,12 +732,11 @@ func TestListSymbols(t *testing.T) {
 		},
 		{
 			name: "success - second page",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 10,
-				Limit:  10,
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 10, Limit: 10},
 			},
-			filter: map[string]interface{}{"project_id": uint64(1)},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
 				symbols := make([]*domain.Symbol, 10)
 				for i := 0; i < 10; i++ {
 					symbols[i] = validSymbol()
@@ -746,7 +748,9 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     true,
 					HasPreviousPage: true,
 				}
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return(symbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Filter.ProjectID == opts.Filter.ProjectID
+				})).Return(symbols, expectedMeta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
@@ -758,12 +762,11 @@ func TestListSymbols(t *testing.T) {
 		},
 		{
 			name: "success - empty result",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  20,
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(999)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 20},
 			},
-			filter: map[string]interface{}{"project_id": uint64(999)},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
 				expectedMeta := &pagination.Meta{
 					TotalCount:      0,
 					Offset:          0,
@@ -771,7 +774,9 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return([]*domain.Symbol{}, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Filter.ProjectID == opts.Filter.ProjectID
+				})).Return([]*domain.Symbol{}, expectedMeta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
@@ -783,36 +788,36 @@ func TestListSymbols(t *testing.T) {
 		},
 		{
 			name: "limit too large",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  101,
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 101},
 			},
-			filter: map[string]interface{}{"project_id": uint64(1)},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
 			},
 			wantErr:     true,
 			errContains: "Limit",
 		},
 		{
 			name: "repository error",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  10,
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
 			},
-			filter: map[string]interface{}{"project_id": uint64(1)},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return(nil, nil, errors.New("database error"))
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
+				repo.On("ListSymbols", ctx, mock.Anything).Return(nil, nil, errors.New("database error"))
 			},
 			wantErr: true,
 		},
 		{
-			name: "success - passes nil filter to repository",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  10,
-			},
-			filter: nil,
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			name: "success - filter with label",
+			opts: func() domain.ListSymbolsOptions {
+				label := "test-label"
+				return domain.ListSymbolsOptions{
+					Filter:     domain.SymbolFilter{ProjectID: uint64(1), Label: &label},
+					Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				}
+			}(),
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
 				symbol := validSymbol()
 				expectedSymbols := []*domain.Symbol{symbol}
 				expectedMeta := &pagination.Meta{
@@ -822,8 +827,9 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				// Verify nil filter is passed through
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Filter.Label != nil && *o.Filter.Label == "test-label"
+				})).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
@@ -831,13 +837,15 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name: "success - passes empty filter to repository",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  10,
-			},
-			filter: map[string]interface{}{},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			name: "success - filter with component_target",
+			opts: func() domain.ListSymbolsOptions {
+				componentTarget := "test-component"
+				return domain.ListSymbolsOptions{
+					Filter:     domain.SymbolFilter{ProjectID: uint64(1), ComponentTarget: &componentTarget},
+					Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				}
+			}(),
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
 				symbol := validSymbol()
 				expectedSymbols := []*domain.Symbol{symbol}
 				expectedMeta := &pagination.Meta{
@@ -847,8 +855,9 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				// Verify empty map is passed through
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Filter.ComponentTarget != nil && *o.Filter.ComponentTarget == "test-component"
+				})).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
@@ -856,13 +865,16 @@ func TestListSymbols(t *testing.T) {
 			},
 		},
 		{
-			name: "success - multiple filters passed through",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  10,
-			},
-			filter: map[string]interface{}{"project_id": uint64(1), "label": "test-label", "version": uint32(2)},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
+			name: "success - filter with label and component_target",
+			opts: func() domain.ListSymbolsOptions {
+				label := "test-label"
+				componentTarget := "test-component"
+				return domain.ListSymbolsOptions{
+					Filter:     domain.SymbolFilter{ProjectID: uint64(1), Label: &label, ComponentTarget: &componentTarget},
+					Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				}
+			}(),
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
 				symbol := validSymbol()
 				expectedSymbols := []*domain.Symbol{symbol}
 				expectedMeta := &pagination.Meta{
@@ -872,8 +884,9 @@ func TestListSymbols(t *testing.T) {
 					HasNextPage:     false,
 					HasPreviousPage: false,
 				}
-				// Verify all filter keys are preserved
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return(expectedSymbols, expectedMeta, nil)
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Filter.Label != nil && o.Filter.ComponentTarget != nil
+				})).Return(expectedSymbols, expectedMeta, nil)
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
@@ -882,15 +895,71 @@ func TestListSymbols(t *testing.T) {
 		},
 		{
 			name: "error - repository error with filter",
-			params: &pagination.OffsetPaginationParams{
-				Offset: 0,
-				Limit:  10,
-			},
-			filter: map[string]interface{}{"project_id": uint64(1), "label": "test"},
-			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) {
-				repo.On("ListSymbols", ctx, offset, limit, filter).Return(nil, nil, errors.New("database error"))
+			opts: func() domain.ListSymbolsOptions {
+				label := "test"
+				return domain.ListSymbolsOptions{
+					Filter:     domain.SymbolFilter{ProjectID: uint64(1), Label: &label},
+					Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				}
+			}(),
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
+				repo.On("ListSymbols", ctx, mock.Anything).Return(nil, nil, errors.New("database error"))
 			},
 			wantErr: true,
+		},
+		{
+			name: "success - applies default sort when not specified",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				// Sort is not set, should default to ID ASC
+			},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
+				symbol := validSymbol()
+				expectedSymbols := []*domain.Symbol{symbol}
+				expectedMeta := &pagination.Meta{
+					TotalCount:      1,
+					Offset:          0,
+					Limit:           10,
+					HasNextPage:     false,
+					HasPreviousPage: false,
+				}
+				// Verify that default sort is applied
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Sort.Field == domain.SortByID && o.Sort.Direction == domain.SortAsc
+				})).Return(expectedSymbols, expectedMeta, nil)
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 1)
+			},
+		},
+		{
+			name: "success - preserves custom sort",
+			opts: domain.ListSymbolsOptions{
+				Filter:     domain.SymbolFilter{ProjectID: uint64(1)},
+				Pagination: pagination.OffsetPaginationParams{Offset: 0, Limit: 10},
+				Sort:       domain.SortOption{Field: domain.SortByLabel, Direction: domain.SortDesc},
+			},
+			mockSetup: func(repo *MockSymbolRepo, ctx context.Context, opts domain.ListSymbolsOptions) {
+				symbol := validSymbol()
+				expectedSymbols := []*domain.Symbol{symbol}
+				expectedMeta := &pagination.Meta{
+					TotalCount:      1,
+					Offset:          0,
+					Limit:           10,
+					HasNextPage:     false,
+					HasPreviousPage: false,
+				}
+				// Verify that custom sort is preserved
+				repo.On("ListSymbols", ctx, mock.MatchedBy(func(o domain.ListSymbolsOptions) bool {
+					return o.Sort.Field == domain.SortByLabel && o.Sort.Direction == domain.SortDesc
+				})).Return(expectedSymbols, expectedMeta, nil)
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, symbols []*domain.Symbol, meta *pagination.Meta) {
+				assert.Len(t, symbols, 1)
+			},
 		},
 	}
 
@@ -900,9 +969,9 @@ func TestListSymbols(t *testing.T) {
 			uc := setupSymbolUseCase(mockRepo)
 			ctx := context.Background()
 
-			tt.mockSetup(mockRepo, ctx, tt.params.Offset, tt.params.Limit, tt.filter)
+			tt.mockSetup(mockRepo, ctx, tt.opts)
 
-			symbols, meta, err := uc.ListSymbols(ctx, tt.params, tt.filter)
+			symbols, meta, err := uc.ListSymbols(ctx, tt.opts)
 
 			if tt.wantErr {
 				assert.Error(t, err)

@@ -4,12 +4,14 @@ package repo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"platform/pagination"
 	"strings"
 	"symbols/internal/biz/domain"
 	"symbols/internal/data/common"
 	"symbols/internal/data/model"
 
+	"github.com/go-kratos-ecosystem/components/v2/gorm/scopes"
 	"github.com/go-kratos/kratos/v2/log"
 	"gorm.io/gorm"
 )
@@ -74,25 +76,32 @@ func (r *symbolRepo) FindByID(ctx context.Context, id uint64) (*domain.Symbol, e
 	return toDomainSymbol(symbol), nil
 }
 
-func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint32, filter map[string]interface{}) ([]*domain.Symbol, *pagination.Meta, error) {
+func (r *symbolRepo) ListSymbols(ctx context.Context, opts domain.ListSymbolsOptions) ([]*domain.Symbol, *pagination.Meta, error) {
 	var symbolEntities []*model.Symbol
 	var totalCount int64
 
-	// Base query with context
-	query := r.db.WithContext(ctx).Model(&model.Symbol{})
-
-	// Apply filters if provided (both count and find queries will use this)
-	if len(filter) > 0 {
-		query = query.Where(filter)
-	}
+	// Build query with go-kratos scopes for type-safe filtering
+	query := r.db.WithContext(ctx).Model(&model.Symbol{}).
+		Scopes(scopes.New().
+			WhereEq("project_id", opts.Filter.ProjectID).
+			When(opts.Filter.Label != nil, func(db *gorm.DB) *gorm.DB {
+				return db.Where("label = ?", *opts.Filter.Label)
+			}).
+			When(opts.Filter.ComponentTarget != nil, func(db *gorm.DB) *gorm.DB {
+				return db.Where("component_target = ?", *opts.Filter.ComponentTarget)
+			}).
+			Scope())
 
 	// Count total records WITH filters applied
 	if err := query.Count(&totalCount).Error; err != nil {
 		return nil, nil, r.mapGormError(err)
 	}
 
+	// Apply sorting for deterministic pagination
+	query = query.Scopes(r.symbolSortScope(opts.Sort))
+
 	// Apply pagination to the query
-	query = query.Limit(int(limit)).Offset(int(offset))
+	query = query.Limit(int(opts.Pagination.Limit)).Offset(int(opts.Pagination.Offset))
 
 	if err := query.Find(&symbolEntities).Error; err != nil {
 		return nil, nil, r.mapGormError(err)
@@ -107,13 +116,28 @@ func (r *symbolRepo) ListSymbols(ctx context.Context, offset uint64, limit uint3
 	// Calculate paginationParams metadata
 	meta := &pagination.Meta{
 		TotalCount:      uint64(totalCount),
-		Offset:          offset,
-		Limit:           limit,
-		HasNextPage:     offset+uint64(len(symbolEntities)) < uint64(totalCount),
-		HasPreviousPage: offset > 0,
+		Offset:          opts.Pagination.Offset,
+		Limit:           opts.Pagination.Limit,
+		HasNextPage:     opts.Pagination.Offset+uint64(len(symbolEntities)) < uint64(totalCount),
+		HasPreviousPage: opts.Pagination.Offset > 0,
 	}
 
 	return symbols, meta, nil
+}
+
+// symbolSortScope returns a GORM scope for applying sorting to symbol queries.
+func (r *symbolRepo) symbolSortScope(sort domain.SortOption) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		// Apply default sort if not valid
+		if !sort.Field.IsValid() {
+			sort = domain.DefaultSortOption()
+		}
+		// Default direction to ASC if not specified
+		if sort.Direction == "" {
+			sort.Direction = domain.SortAsc
+		}
+		return db.Order(fmt.Sprintf("%s %s", sort.Field, sort.Direction))
+	}
 }
 
 func (r *symbolRepo) Delete(ctx context.Context, id uint64) error {

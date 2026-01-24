@@ -106,7 +106,7 @@ message GetSymbolResponse {
   Symbol symbol = 1 [(validate.rules).message.required = true];
 }
 
-//
+// ListSymbolsRequest contains parameters for listing symbols with optional filters.
 message ListSymbolsRequest {
   uint64 project_id = 1 [(validate.rules).uint64 = {gt: 0}];
   // Offset-based pagination: number of records to skip
@@ -116,6 +116,10 @@ message ListSymbolsRequest {
     gte: 1
     lte: 100
   }];
+
+  // Optional filters
+  optional string label = 4;              // Exact match on label
+  optional string component_target = 5;   // Exact match on component_target
 }
 
 // PaginationMeta contains metadata about paginated results

@@ -675,15 +675,19 @@ func (x *GetSymbolResponse) GetSymbol() *Symbol {
 	return nil
 }
 
+// ListSymbolsRequest contains parameters for listing symbols with optional filters.
 type ListSymbolsRequest struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId uint64                 `protobuf:"varint,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	// Offset-based pagination: number of records to skip
 	Offset uint64 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
 	// Maximum number of records to return (default: 20)
-	Limit         uint32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Limit uint32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Optional filters
+	Label           *string `protobuf:"bytes,4,opt,name=label,proto3,oneof" json:"label,omitempty"`                                            // Exact match on label
+	ComponentTarget *string `protobuf:"bytes,5,opt,name=component_target,json=componentTarget,proto3,oneof" json:"component_target,omitempty"` // Exact match on component_target
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ListSymbolsRequest) Reset() {
@@ -735,6 +739,20 @@ func (x *ListSymbolsRequest) GetLimit() uint32 {
 		return x.Limit
 	}
 	return 0
+}
+
+func (x *ListSymbolsRequest) GetLabel() string {
+	if x != nil && x.Label != nil {
+		return *x.Label
+	}
+	return ""
+}
+
+func (x *ListSymbolsRequest) GetComponentTarget() string {
+	if x != nil && x.ComponentTarget != nil {
+		return *x.ComponentTarget
+	}
+	return ""
 }
 
 // PaginationMeta contains metadata about paginated results
@@ -930,12 +948,16 @@ const file_service_symbols_v1_symbols_proto_rawDesc = "" +
 	"\x10GetSymbolRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\x04B\a\xfaB\x042\x02 \x00R\x02id\"Q\n" +
 	"\x11GetSymbolResponse\x12<\n" +
-	"\x06symbol\x18\x01 \x01(\v2\x1a.service.symbols.v1.SymbolB\b\xfaB\x05\x8a\x01\x02\x10\x01R\x06symbol\"~\n" +
+	"\x06symbol\x18\x01 \x01(\v2\x1a.service.symbols.v1.SymbolB\b\xfaB\x05\x8a\x01\x02\x10\x01R\x06symbol\"\xe8\x01\n" +
 	"\x12ListSymbolsRequest\x12&\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\x04B\a\xfaB\x042\x02 \x00R\tprojectId\x12\x1f\n" +
 	"\x06offset\x18\x02 \x01(\x04B\a\xfaB\x042\x02(\x00R\x06offset\x12\x1f\n" +
-	"\x05limit\x18\x03 \x01(\rB\t\xfaB\x06*\x04\x18d(\x01R\x05limit\"\xaf\x01\n" +
+	"\x05limit\x18\x03 \x01(\rB\t\xfaB\x06*\x04\x18d(\x01R\x05limit\x12\x19\n" +
+	"\x05label\x18\x04 \x01(\tH\x00R\x05label\x88\x01\x01\x12.\n" +
+	"\x10component_target\x18\x05 \x01(\tH\x01R\x0fcomponentTarget\x88\x01\x01B\b\n" +
+	"\x06_labelB\x13\n" +
+	"\x11_component_target\"\xaf\x01\n" +
 	"\x0ePaginationMeta\x12\x1f\n" +
 	"\vtotal_count\x18\x01 \x01(\x04R\n" +
 	"totalCount\x12\x16\n" +
@@ -1012,6 +1034,7 @@ func file_service_symbols_v1_symbols_proto_init() {
 	if File_service_symbols_v1_symbols_proto != nil {
 		return
 	}
+	file_service_symbols_v1_symbols_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

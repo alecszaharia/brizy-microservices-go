@@ -6,6 +6,7 @@ require (
 	github.com/ThreeDotsLabs/watermill v1.5.1
 	github.com/ThreeDotsLabs/watermill-amqp/v3 v3.0.2
 	github.com/envoyproxy/protoc-gen-validate v1.3.0
+	github.com/go-kratos-ecosystem/components/v2 v2.27.0
 	github.com/go-kratos/kratos/contrib/middleware/validate/v2 v2.0.0-20251217105121-fb8e43efb207
 	github.com/go-kratos/kratos/v2 v2.9.2
 	github.com/go-playground/validator/v10 v10.30.1
