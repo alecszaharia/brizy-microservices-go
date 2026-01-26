@@ -2,10 +2,10 @@
 package biz
 
 import (
-	"symbols/internal/biz/symbol"
+	"symbols/internal/biz/usecase"
 
 	"github.com/google/wire"
 )
 
 // ProviderSet is biz providers.
-var ProviderSet = wire.NewSet(symbol.NewValidator, symbol.NewUseCase)
+var ProviderSet = wire.NewSet(usecase.NewValidator, usecase.NewUseCase)

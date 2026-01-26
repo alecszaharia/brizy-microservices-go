@@ -1,5 +1,5 @@
-// Package symbol provides use cases for managing symbols.
-package symbol
+// Package usecase Package symbol provides use cases for managing symbols.
+package usecase
 
 import (
 	"context"

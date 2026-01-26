@@ -1,5 +1,5 @@
 // Package symbol provides tests for use cases for managing symbols.
-package symbol
+package usecase
 
 import (
 	"context"

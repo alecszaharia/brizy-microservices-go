@@ -1,5 +1,5 @@
-// Package symbol provides validation for symbols.
-package symbol
+// Package usecase Package symbol provides validation for symbols.
+package usecase
 
 import (
 	"github.com/go-playground/validator/v10"
